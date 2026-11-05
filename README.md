@@ -37,11 +37,17 @@ David wants department-specific requirements. Emily does not want to see 40 task
 **New hire**
 - A home screen with stage and up to three next steps. Progress shows the person's own tasks apart from the whole plan.
 - Separate lists for tasks waiting on someone else and for what is coming up.
+- A journey across four stages, where position shows time and only the text shows completed tasks.
+- A first task that shows why it matters and what to do.
+- "Have a question?", which answers from the person's own plan. It uses simple matching, not AI, and says so. It admits when it cannot answer.
+- "Ask for help", which sends a prepared in-app request to the person who can act, and shows its status.
 - A full plan grouped by phase.
 - Task details with complete and undo.
 - Completed, outstanding, upcoming, waiting, and overdue states. Each one has its own colour, icon, and text.
 
 **Manager and HR**
+- "Who needs attention" cards that say who, why, and what to do next.
+- Help requests sent by new hires, which the recipient can resolve.
 - A short "Your next actions" list of the tasks that person can complete. Each row links to the real task and names any work it blocks. Sarah sees HR and IT tasks apart.
 - A roster sorted by need, with the reason for each flag written out, including who owns the overdue work.
 - A filter, and a detail page with the same plan the new hire sees.
@@ -62,8 +68,10 @@ David wants department-specific requirements. Emily does not want to see 40 task
 |---|---|
 | Status, progress, and permission rules | Login. The View as menu stands in for it |
 | Saved changes, in this browser's localStorage | A server. Nothing is shared between browsers |
-| Nudges, which appear in the app | Email and Slack. The screen says that no email is sent |
+| Nudges and help requests, which appear in the app | Email and Slack. The screen says that no email is sent |
+| Answers to questions, from the person's real plan | An AI model. Using one would need a secure backend, so the panel says "not AI" |
 | Plans created from company and department task lists | A rule engine or AI plan generation |
+| Six short sample documents you can read in the task drawer | Real company documents. Each excerpt is labelled as a sample |
 | Marking a task complete, as the person's own confirmation | Documents, forms, and e-signature. The screen says that checking off does not submit or verify anything |
 
 Sarah also stands in for IT, because the prototype has no IT role.
@@ -82,7 +90,7 @@ The full list, with what I would ask Sarah about each, is in [docs/decisions.md]
 ## What I left out, and why
 
 - **Template editor and rule engine.** Sarah said "eventually", and plans are already data that a later builder can use.
-- **AI plan generation.** The MangoApps public site already advertises AI-drafted plans. The prototype focuses on what a new hire does first.
+- **AI plan generation and a real AI assistant.** The MangoApps public site already advertises AI-drafted plans, and an assistant would need a secure backend. A frontend API key is not acceptable, so questions use simple rules instead.
 - **Real documents, e-signature, and I-9 handling.** Faking compliance is risky.
 - **Email and calendar connections.** They need a backend.
 - **Charts and gamification.** Neither answers a question in the brief.
@@ -101,8 +109,8 @@ The full exclusions table is in [docs/plan.md](docs/plan.md).
 ## Testing
 
 ```bash
-npm test             # 138 unit tests
-npm run test:e2e     # 92 browser tests, using your installed Chrome
+npm test             # 161 unit tests
+npm run test:e2e     # 103 browser tests, using your installed Chrome
 npm run build        # type-check and production build
 ```
 

@@ -40,7 +40,7 @@ test.describe('manager view', () => {
 
   test('a manager opens a hire, and reaches the same plan', async ({ page }) => {
     await openApp(page, '#/team/david')
-    await page.getByRole('link', { name: 'Priya Nair' }).click()
+    await page.locator('table').getByRole('link', { name: 'Priya Nair' }).click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Priya Nair')
     await expect(page.getByRole('heading', { name: 'Why flagged' })).toBeVisible()
     await expect(page.getByText('This plan has 11 company tasks and 7 Engineering tasks.')).toBeVisible()
@@ -370,5 +370,106 @@ test.describe('start a new plan', () => {
         expect(overflows, `${hash} at ${width}`).toBe(false)
       }
     }
+  })
+})
+
+test.describe('questions and help requests', () => {
+  test('answers common questions from the real plan, and updates as it changes', async ({ page }) => {
+    await openApp(page)
+    await page.getByRole('button', { name: 'What am I waiting on?' }).click()
+    const panel = page.getByRole('region', { name: 'Have a question?' })
+    await expect(panel).toContainText('IT to finish “Grant repository access”')
+    await expect(panel).toContainText('Answers come from your plan, not AI.')
+    await page.getByLabel('Ask about your onboarding').fill('Who can help me with repository access?')
+    await page.getByRole('button', { name: 'Ask', exact: true }).click()
+    await expect(panel).toContainText('IT owns this. Sarah Mitchell can follow up on it.')
+    // An answer links to the real task.
+    await panel.getByRole('link', { name: /Grant repository access/ }).click()
+    await expect(page).toHaveURL(/task\/e-repo-grant$/)
+  })
+
+  test('admits what it does not know, and offers a person', async ({ page }) => {
+    await openApp(page)
+    await page.getByLabel('Ask about your onboarding').fill('What is the dress code?')
+    await page.keyboard.press('Enter')
+    const panel = page.getByRole('region', { name: 'Have a question?' })
+    await expect(panel).toContainText('That isn’t in your onboarding plan')
+    await panel.getByRole('button', { name: 'Ask David' }).click()
+    await expect(page.getByLabel('Your message')).toHaveValue('What is the dress code?')
+    await page.getByRole('button', { name: 'Send request' }).click()
+    await expect(page.getByRole('heading', { name: 'Your requests' }).locator('..')).toContainText('Waiting for a response.')
+    await page.goto('/#/team/david')
+    await expect(page.getByRole('heading', { name: 'Help requests' }).locator('..')).toContainText('What is the dress code?')
+  })
+
+  test('Emily asks about a blocker, Sarah sees it, resolves it, and Emily sees the result', async ({ context }) => {
+    const emily = await context.newPage()
+    const sarah = await context.newPage()
+    const noErrors = watchForErrors(emily)
+    await openApp(emily)
+    await openApp(sarah, '#/team/sarah')
+
+    await emily.getByRole('button', { name: /Ask for help.*Run the local setup/ }).click()
+    const message = emily.getByLabel('Your message')
+    await expect(message).toHaveValue(/Grant repository access/)
+    await expect(emily.getByRole('dialog')).toContainText('No email is sent in this prototype.')
+    await emily.getByRole('button', { name: 'Send request' }).click()
+    await expect(emily.getByText('Request sent to Sarah. Waiting for a response.')).toBeVisible()
+    await expect(emily.locator('main')).toBeFocused()
+    await expect(emily.getByRole('button', { name: /Ask for help.*Run the local setup/ })).toHaveCount(0)
+
+    const requests = sarah.getByRole('heading', { name: 'Help requests' }).locator('..')
+    await expect(requests).toContainText('Emily Carter')
+    await requests.getByRole('button', { name: /Mark.*resolved.*Emily/i }).click()
+    await expect(requests).not.toContainText('Emily Carter')
+
+    await expect(emily.getByText('Resolved by Sarah Mitchell.')).toBeVisible()
+    noErrors()
+  })
+
+  test('the status names who actually received the request, even after the task changes', async ({ page }) => {
+    // Tomás's request went to Sarah about a task waiting on IT.
+    await openApp(page, '#/team/sarah/hire/tomas-rivera/task/s-crm-account')
+    await page.getByRole('dialog').getByRole('button', { name: 'Mark complete' }).click()
+    await expect(page.getByRole('dialog').getByRole('button', { name: 'Undo completion' })).toBeVisible()
+    await page.goto('/#/me/tomas-rivera/task/s-crm')
+    await expect(page.getByRole('dialog')).toContainText('Request sent to Sarah.')
+    await expect(page.getByRole('dialog')).not.toContainText('Request sent to Renee')
+  })
+
+  test('a finished hire can still see the status of a request', async ({ page }) => {
+    await openApp(page, '#/me/aisha-rahman')
+    await page.getByLabel('Ask about your onboarding').fill('Can I work from home?')
+    await page.keyboard.press('Enter')
+    const panel = page.getByRole('region', { name: 'Have a question?' })
+    await panel.getByRole('button', { name: 'Ask Renee' }).click()
+    await page.getByRole('button', { name: 'Send request' }).click()
+    await expect(page.getByRole('heading', { name: 'Your requests' }).locator('..')).toContainText('Waiting for a response.')
+  })
+
+  test('a manager is not told to wait when the new hire has late tasks too', async ({ page }) => {
+    await openApp(page, '#/team/sarah')
+    const card = page.locator('li').filter({ has: page.getByRole('heading', { name: 'Marcus Webb' }) })
+    await card.getByRole('button', { name: 'Nudge Marcus' }).click()
+    await expect(page.getByText('It appears in their workspace. No email is sent.')).toBeVisible()
+    await expect(card).toContainText('Nudged today')
+    await expect(card).not.toContainText('Waiting on')
+  })
+
+  test('rejects an empty help message', async ({ page }) => {
+    await openApp(page)
+    await page.getByRole('button', { name: /Ask for help.*Run the local setup/ }).click()
+    await page.getByLabel('Your message').fill('   ')
+    await page.getByRole('button', { name: 'Send request' }).click()
+    await expect(page.getByRole('alert').filter({ hasText: 'Write a short message first.' })).toBeVisible()
+    await expect(page.getByRole('dialog')).toBeVisible()
+  })
+
+  test('sample documents can be read and say they are samples', async ({ page }) => {
+    await openApp(page, '#/me/emily-carter/task/c-handbook')
+    const dialog = page.getByRole('dialog')
+    await dialog.getByText('Read BrightPath Employee Handbook').click()
+    await expect(dialog).toContainText('Time off: ask your manager first')
+    await expect(dialog).toContainText('not a real document')
   })
 })

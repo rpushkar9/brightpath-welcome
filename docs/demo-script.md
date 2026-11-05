@@ -29,21 +29,21 @@ Point at the three tasks, then at the Engineering label.
 
 ## 1:00 The new hire experience (45 seconds)
 
-Click **Mark complete**. Point out the progress and the next task moving up. Click **Undo**, then complete the task again. Point at the **Waiting on someone else** panel.
+Click **Mark complete**. Point out the progress and the next task moving up. Point at **Waiting on someone else**, then click **Ask for help** and **Send request**.
 
-> When Emily finishes a task, progress updates right away and the next task moves up. A click made by mistake can be undone.
+> When Emily finishes a task, progress updates right away and the next task moves up, and Undo is there for mistakes.
 >
-> This one is a detail I care about. Emily can't run the local setup until IT grants access. The app says so, and says there's nothing for Emily to do yet. If IT is late, that lateness counts against IT, not Emily.
+> New hires have a lot of questions, so asking is easy. Emily can't run the local setup until IT grants access. The app says so, and one click sends a prepared request to the person who can fix it. I can also type a question. These answers come from Emily's real plan using simple rules, and the panel says it isn't AI.
 
-Click **See the full plan**.
+Type "Who can help me with repository access?" and press Enter. Click **See the full plan**.
 
-> The whole plan is one click away, grouped by phase, with upcoming and overdue tasks clearly different. That covers Sarah's request for one place with everything in it.
+> The whole plan is one click away, grouped by phase. That covers Sarah's request for one place with everything in it.
 
 ## 1:45 Department differences (15 seconds)
 
 Use **View as** to open Marcus Webb, then the full plan.
 
-> Marcus is in Sales. The company tasks are the same, but the department tasks are product orientation, CRM workflows, and enablement training. Marcus is also behind, so the overdue work comes first, worded calmly.
+> Marcus is in Sales, so the department tasks are different, and the overdue work comes first, worded calmly.
 
 ## 2:00 Manager visibility (40 seconds)
 
@@ -51,15 +51,15 @@ Put the left window back on Emily's home screen. Complete a task on the left and
 
 > Here's David's view. The headline answers the manager's question: one person needs your help. When Emily finishes a task on the left, David's roster updates on the right.
 >
-> Priya sorts to the top, and the reason is written out. David opens Priya's plan and can send a nudge. I didn't build email, and the screen says so. The nudge appears on Priya's home screen.
+> The card says who, why, and what to do next. David can nudge Priya, and I didn't build email, so the screen says the nudge stays in the app.
 
-Click **Priya Nair**, then **Nudge Priya**.
+Click **Nudge Priya**.
 
 ## 2:40 HR and starting a plan (40 seconds)
 
-Switch the right window to **Sarah Mitchell**. Point at **Your next actions**, then click **Create CRM account**, **Mark complete**, and close the drawer.
+Switch the right window to **Sarah Mitchell**. Point at **Help requests**, click **Mark resolved** on Emily's request, then point at Tomás's card and click **Open task**, **Mark complete**, and close the drawer.
 
-> Sarah sees everyone, plus a short list of Sarah's own work. Tomás is flagged, but the reason is that an IT task is late, and it's blocking Tomás. Nudging Tomás wouldn't help, so the app doesn't offer that. Sarah clears the task here, and Tomás can move on.
+> Emily's request is already here for Sarah, and resolving it updates Emily's screen. Tomás is flagged because an IT task is late, so nudging Tomás wouldn't help, and the app doesn't offer that. Sarah clears the task here, and Tomás can move on.
 
 Click **Start a new plan**. Click **Start plan** with empty fields. Choose Engineering, then Sales.
 
@@ -67,11 +67,11 @@ Click **Start a new plan**. Click **Start plan** with empty fields. Choose Engin
 
 ## 3:20 What I guessed (30 seconds)
 
-> The request left a lot open, so I made assumptions and wrote them down. A few that matter: a task becomes overdue the business day after its due date. Upcoming tasks can't be completed early. "Needs attention" means two overdue tasks, or one that's three business days late. And I guessed Emily is on David's team, because the scenario doesn't say.
+> The request left a lot open, so I made assumptions and wrote them down. Two that matter: upcoming tasks can't be completed early, and "Needs attention" means two overdue tasks or one that's three business days late.
 
 ## 3:50 What I left out, and what I'd ask Sarah (30 seconds)
 
-> I left out real login, documents, e-signature, email, and a template editor. They wouldn't prove the core idea, and faking compliance is risky. MangoApps' public site already advertises template matching and AI-drafted plans, so I focused on the moment a new hire asks what to do first.
+> I left out real login, documents, e-signature, email, a template editor, and a real AI model, which would need a secure backend. MangoApps' public site already advertises template matching and AI-drafted plans, so I focused on the moment a new hire asks what to do first.
 >
 > Next, I'd ask Sarah four things. Which tasks must every department do? Which dates are legally fixed? What would actually make you step in for a new hire? And who chases IT today?
 

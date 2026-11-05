@@ -114,7 +114,7 @@ test.describe('employee journey', () => {
 
   test('focus is not lost when the finished task leaves the list', async ({ page }) => {
     await openApp(page, '#/me/emily-carter')
-    await page.getByRole('link', { name: 'See what to do' }).click()
+    await page.getByRole('link', { name: 'Task details' }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Mark complete' }).click()
     await expect(page.getByRole('dialog').getByRole('button', { name: 'Undo completion' })).toBeVisible()
     await page.keyboard.press('Escape')
@@ -142,7 +142,7 @@ test.describe('employee journey', () => {
 
   test('Engineering and Sales see different plans', async ({ page }) => {
     await openApp(page, '#/me/emily-carter/plan')
-    for (const name of ['Before day one', 'First day', 'First week', 'Weeks 2–4']) {
+    for (const name of ['Before your first day', 'Day one', 'First week', 'First month']) {
       const button = page.getByRole('button', { name: new RegExp(name) })
       if ((await button.getAttribute('aria-expanded')) === 'false') await button.click()
     }
@@ -150,7 +150,7 @@ test.describe('employee journey', () => {
     await expect(page.getByText('Review CRM workflows')).toHaveCount(0)
 
     await page.goto('/#/me/marcus-webb/plan')
-    for (const name of ['Before day one', 'First day', 'First week', 'Weeks 2–4']) {
+    for (const name of ['Before your first day', 'Day one', 'First week', 'First month']) {
       const button = page.getByRole('button', { name: new RegExp(name) })
       if ((await button.getAttribute('aria-expanded')) === 'false') await button.click()
     }
@@ -191,13 +191,22 @@ test.describe('honest progress and wording', () => {
   test('marks the current phase by date, not by completion', async ({ page }) => {
     await openApp(page)
     const current = page.locator('ol[aria-label="Onboarding phases"] li[aria-current="step"]')
-    await expect(current).toContainText('First day')
-    const before = await current.locator('span[aria-hidden]').boundingBox()
+    await expect(current).toContainText('Day one')
+    // Text above the path reflows when web fonts arrive, so measure after they load.
+    await page.evaluate(() => document.fonts.ready)
+    const before = await current.locator('[data-phase-marker]').boundingBox()
     await page.getByRole('button', { name: 'Mark complete' }).click()
     await expect(page.locator('header')).toContainText('Whole plan: 7 of 18')
-    await expect(current).toContainText('First day')
+    await expect(current).toContainText('Day one')
     await expect(current).toContainText('3 of 4 done')
-    expect(await current.locator('span[aria-hidden]').boundingBox()).toEqual(before)
+    expect(await current.locator('[data-phase-marker]').boundingBox()).toEqual(before)
+  })
+
+  test('a past phase with open work does not show a check mark', async ({ page }) => {
+    await openApp(page, '#/me/marcus-webb')
+    const phases = page.locator('ol[aria-label="Onboarding phases"] > li')
+    await expect(phases.nth(1).locator('svg')).toHaveCount(1) // Day one is finished
+    await expect(phases.nth(2).locator('svg')).toHaveCount(0) // First week still has open work
   })
 
   test('does not claim IT is working on something', async ({ page }) => {
@@ -366,7 +375,7 @@ test.describe('phone layout', () => {
     await openApp(page)
     await expect(page.getByText('Start here')).toBeInViewport()
     await expect(page.locator('[data-task-link="e-docs"]')).toBeInViewport({ ratio: 1 })
-    await expect(page.getByText('Software Engineer. Started today.')).toBeVisible()
+    await expect(page.getByText('Software Engineer, Engineering. Started today.')).toBeVisible()
   })
 
   test('the drawer fills the screen', async ({ page }) => {

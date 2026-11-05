@@ -21,6 +21,7 @@ Newest additions go at the bottom of each table. "Ask Sarah" marks what we would
 | A13 | Plans cover about the first 30 days | "First few weeks" in the request | When does onboarding end at BrightPath? |
 | A14 | Sarah stands in for IT in the prototype | Avoids building a role that adds no insight | Who owns access requests? |
 | A15 | People and task wording are invented and US-based | Mock data is allowed | Which regions do you hire in? |
+| A17 | Blocked-task and IT or HR questions go to Sarah, and everything else starts with the manager | The person who can act should hear about it | Who should new hires ask about IT today? |
 | A16 | A plan started late moves any passed due dates up to its creation date | A new hire should not begin with overdue tasks | What is your usual lead time before a start date? |
 
 ## Deliberate exclusions
@@ -42,6 +43,9 @@ See section 4 of [plan.md](plan.md).
 | D9 | Persona and screen live in the URL | Saved persona | Two windows can show Emily and David at once, and links work after refresh |
 | D11 | Keep forest green, not MangoApps colours | Full MangoApps palette | BrightPath is the customer, and orange and yellow sit too close to the Watch and overdue colours |
 | D12 | "Your next actions" stays short, three for managers and two per group for HR | A full task inbox | The people the headline names must stay near the top of the screen |
+| D13 | Questions use simple rules over the real plan, labelled "not AI" | A real AI model | A public static site cannot hold an API key, and a model needs a backend. Rules are reliable and honest for a demo |
+| D14 | Help requests stay in the app, and go to whoever can act | Prefilled email | Works end to end with no invented addresses, and managers see it in one place |
+| D15 | Help requests have only open and resolved | Threaded replies | A reply needs a real messaging product. Status is enough to show the idea |
 | D10 | Radix primitives styled directly | The full shadcn setup | shadcn wraps these same primitives, and we only need a drawer and a menu |
 
 ## Approved decisions

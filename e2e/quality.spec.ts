@@ -12,6 +12,7 @@ const SCREENS = [
   ['HR roster', '#/team/sarah'],
   ['hire detail', '#/team/sarah/hire/marcus-webb'],
   ['new plan form', '#/team/sarah/new'],
+  ['nudge and help on a late plan', '#/me/tomas-rivera'],
   ['not found', '#/nope'],
 ] as const
 
@@ -61,7 +62,7 @@ test.describe('main journey', () => {
     const managerClean = watchForErrors(manager)
     await openApp(manager, '#/team/david')
     await expect(manager.locator('table')).toContainText('7 of 18')
-    await manager.getByRole('link', { name: 'Priya Nair' }).click()
+    await manager.locator('table').getByRole('link', { name: 'Priya Nair' }).click()
     await manager.getByRole('button', { name: 'Nudge Priya' }).click()
     await expect(manager.getByText('Nudged today')).toBeVisible()
 
@@ -77,13 +78,15 @@ test.describe('main journey', () => {
 test.describe('keyboard', () => {
   test('a task can be opened, completed and closed with the keyboard alone', async ({ page }) => {
     await openApp(page)
-    const link = page.getByRole('link', { name: 'See what to do' })
+    const link = page.getByRole('link', { name: 'Task details' })
     await link.focus()
     await page.keyboard.press('Enter')
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
     // Focus starts on the scrollable content, so arrow keys can scroll it straight away.
     await expect(dialog.locator(':focus')).toHaveCount(1)
+    // The scroll area, then the sample document, then the action.
+    await page.keyboard.press('Tab')
     await page.keyboard.press('Tab')
     await expect(dialog.getByRole('button', { name: 'Mark complete' })).toBeFocused()
     await page.keyboard.press('Enter')

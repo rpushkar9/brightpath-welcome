@@ -119,6 +119,12 @@ Exactly one status applies, checked in this order:
 - Sarah sees HR tasks and IT tasks apart, because Sarah only stands in for IT.
 - A task shows what it blocks, naming whose task that is. Only tasks already open count.
 
+### Questions and help
+
+- "Have a question?" answers from the person's own plan using simple matching. It says it is not AI, and says so when a question is not covered.
+- A help request goes to Sarah for IT or HR work, and otherwise to the manager. It has a prepared, editable message, and only one can be open per task.
+- Only the recipient can mark it resolved, and the new hire sees that status. No email is sent.
+
 ### Hire status
 
 | Status | Rule |
