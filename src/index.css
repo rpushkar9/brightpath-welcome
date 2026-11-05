@@ -1,0 +1,171 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Instrument Sans Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --color-canvas: #f5f6f3;
+  --color-surface: #ffffff;
+  --color-ink: #1c2321;
+  --color-muted: #59635f;
+  --color-control: #8a8f88;
+  --color-hairline: #e3e1da;
+
+  --color-band: #12382f;
+  --color-band-soft: #c9dcd5;
+  --color-band-line: #3a5f55;
+  --color-path-fill: #8fd3bf;
+  --color-path-marker: #f2b544;
+
+  --color-accent: #1f6f5c;
+  --color-accent-strong: #185a4a;
+  --color-accent-tint: #e3f1ec;
+
+  --color-done: #276b45;
+  --color-done-tint: #e4f2e8;
+  --color-overdue: #b4432b;
+  --color-overdue-tint: #fbeae5;
+  --color-soon: #8a5a00;
+  --color-soon-tint: #fbf0d6;
+  --color-later: #59635f;
+  --color-later-tint: #eef0ee;
+  --color-waiting: #3d5a80;
+  --color-waiting-tint: #e8eef5;
+
+  --radius-control: 6px;
+  --radius-panel: 10px;
+
+  --ease-out-soft: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* In the base layer, or these rules would override every Tailwind utility. */
+@layer base {
+  html {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* The band is dark, so its focus ring must be light. */
+  .on-band :focus-visible {
+    outline-color: #ffffff;
+  }
+}
+
+/* Rows and progress share these so state changes feel like one system. */
+.progress-fill {
+  transition: width 300ms var(--ease-out-soft);
+}
+
+.check-in {
+  animation: check-in 160ms var(--ease-out-soft);
+}
+
+.fade-in {
+  animation: fade-in 200ms var(--ease-out-soft);
+}
+
+.drawer-overlay[data-state='open'] {
+  animation: fade-in 200ms var(--ease-out-soft);
+}
+
+.drawer-overlay[data-state='closed'] {
+  animation: fade-out 160ms ease-in;
+}
+
+.drawer-panel[data-state='open'] {
+  animation: drawer-in 260ms var(--ease-out-soft);
+}
+
+.drawer-panel[data-state='closed'] {
+  animation: drawer-out 200ms ease-in;
+}
+
+.menu-panel[data-state='open'] {
+  animation: menu-in 140ms var(--ease-out-soft);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+  animation-timing-function: var(--ease-out-soft);
+}
+
+@keyframes check-in {
+  from {
+    transform: scale(0.75);
+    opacity: 0.4;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+@keyframes drawer-out {
+  to {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+@keyframes menu-in {
+  from {
+    transform: translateY(-4px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 100ms !important;
+    animation-name: fade-in !important;
+    transition-duration: 0ms !important;
+  }
+
+  .drawer-overlay[data-state='closed'],
+  .drawer-panel[data-state='closed'] {
+    animation-name: fade-out !important;
+  }
+}
