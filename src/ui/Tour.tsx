@@ -1,65 +1,119 @@
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { hrefFor, type Route } from '../app/route'
+import { hrefFor, routeFromHash, type Route } from '../app/route'
+import { leaderById } from '../domain/people'
+import { DEFAULT_HIRE_ID } from '../domain/seed'
 import { stopTour, useTourOpen } from './tourState'
 
 type TourStep = {
-  route: Route
-  /** The first of these found on screen gets the spotlight. */
-  targets: readonly string[]
+  target: string
   title: string
   body: string
   tryIt?: string
 }
 
-const EMILY: Route = { screen: 'home', hireId: 'emily-carter', taskId: null }
+const SWITCH_VIEW: TourStep = {
+  target: 'view-as',
+  title: 'See the other views',
+  body: 'This is a demo, so you can switch to anyone here. Each person gets their own short tour the first time. You can also replay this one or reset the sample data.',
+}
 
-const STEPS: readonly TourStep[] = [
+const NEW_HIRE_STEPS: readonly TourStep[] = [
   {
-    route: EMILY,
-    targets: ['journey'],
+    target: 'journey',
     title: 'See where you are',
-    body: 'This is Emily, a new hire on day one. The marker shows where Emily is in time, and the counts show what’s finished.',
+    body: 'The marker shows where you are in your first month. The counts show what’s finished.',
   },
   {
-    route: EMILY,
-    targets: ['start-here'],
-    title: 'Three tasks, not 18',
-    body: 'Emily’s plan has 18 tasks, but this screen shows three at most. The first one explains why it matters and what to do.',
-    tryIt: 'After the tour, click Mark complete, then Undo.',
+    target: 'start-here',
+    title: 'Start here',
+    body: 'You see three tasks at most, even when your whole plan is longer. The first one explains why it matters and what to do.',
+    tryIt: 'After this tour, click Mark complete, then Undo.',
   },
   {
-    route: EMILY,
-    targets: ['waiting', 'start-here'],
+    target: 'waiting',
     title: 'Waiting isn’t late',
-    body: 'When a task depends on someone else, the app says who. One click prepares a request to the person who can act.',
+    body: 'When a task depends on someone else, this says who. You have nothing to chase, and one click asks the person who can help.',
   },
   {
-    route: EMILY,
-    targets: ['ask'],
+    target: 'ask',
     title: 'Ask a question',
-    body: 'Answers come from Emily’s real plan using simple rules, not AI. If there’s no answer, it offers a person instead of guessing.',
-    tryIt: 'Ask “Who can help me with repository access?”',
+    body: 'Answers come from your own plan using simple rules, not AI. If there’s no answer, it offers a person instead of guessing.',
+    tryIt: 'After this tour, click “What should I do next?”',
   },
   {
-    route: { screen: 'team', leaderId: 'david' },
-    targets: ['attention', 'next-actions'],
-    title: 'What a manager sees',
-    body: 'David gets who needs help, why, and what to do next, using the same data Emily sees.',
+    target: 'full-plan',
+    title: 'Everything is one click away',
+    body: 'Your full plan is here whenever you want it, grouped by phase.',
   },
-  {
-    route: { screen: 'team', leaderId: 'sarah' },
-    targets: ['help-requests', 'next-actions'],
-    title: 'Requests reach the right person',
-    body: 'Sarah in HR sees everyone. Help requests arrive here, and resolving one updates the new hire’s screen.',
-  },
-  {
-    route: { screen: 'team', leaderId: 'sarah' },
-    targets: ['view-as'],
-    title: 'See it from any side',
-    body: 'Switch people here, or reset the sample data at any time. This tour didn’t change anything.',
-  },
+  SWITCH_VIEW,
 ]
+
+const MANAGER_STEPS: readonly TourStep[] = [
+  {
+    target: 'attention',
+    title: 'Who needs your help',
+    body: 'Each card says who, why, and what to do next. If someone else owns the late work, it says so.',
+  },
+  {
+    target: 'next-actions',
+    title: 'What’s yours to do',
+    body: 'These are the tasks only you can complete. Each one opens the real task.',
+  },
+  {
+    target: 'help-requests',
+    title: 'Questions from new hires',
+    body: 'New hires’ requests arrive here. Marking one resolved updates their screen.',
+  },
+  {
+    target: 'roster',
+    title: 'Everyone at a glance',
+    body: 'People who need help come first. Use these filters to narrow the list, and open anyone’s plan from it.',
+  },
+  SWITCH_VIEW,
+]
+
+const HR_STEPS: readonly TourStep[] = [
+  {
+    target: 'attention',
+    title: 'Who needs your help',
+    body: 'You see new hires across every team. Each card says who, why, and what to do next.',
+  },
+  {
+    target: 'next-actions',
+    title: 'What’s yours to do',
+    body: 'HR tasks and IT tasks stay separate. You stand in for IT in this prototype, and a task shows who it’s blocking.',
+  },
+  {
+    target: 'help-requests',
+    title: 'Questions from new hires',
+    body: 'IT and HR questions come to you. Marking one resolved updates the new hire’s screen.',
+  },
+  {
+    target: 'new-plan',
+    title: 'Start a plan',
+    body: 'Choose a department, and the plan comes from company and department tasks.',
+  },
+  SWITCH_VIEW,
+]
+
+/** The tour belongs to the person being viewed, and runs on their main screen. */
+function tourFor(hash: string): { steps: readonly TourStep[]; main: Route } {
+  const route = routeFromHash(hash)
+  if (route.screen === 'home' || route.screen === 'plan') {
+    return { steps: NEW_HIRE_STEPS, main: { screen: 'home', hireId: route.hireId, taskId: null } }
+  }
+  if (route.screen === 'team' || route.screen === 'hire' || route.screen === 'new') {
+    const leader = leaderById(route.leaderId)
+    if (leader) {
+      return {
+        steps: leader.kind === 'hr' ? HR_STEPS : MANAGER_STEPS,
+        main: { screen: 'team', leaderId: leader.id },
+      }
+    }
+  }
+  return { steps: NEW_HIRE_STEPS, main: { screen: 'home', hireId: DEFAULT_HIRE_ID, taskId: null } }
+}
 
 type Box = { top: number; left: number; width: number; height: number }
 
@@ -68,14 +122,9 @@ const CARD_HEIGHT = 310
 const GAP = 14
 const PAD = 6
 
-function findTarget(step: TourStep, allowFallback: boolean): HTMLElement | null {
-  // The page changes a moment after the route does, so first wait for the preferred target.
-  const names = allowFallback ? step.targets : step.targets.slice(0, 1)
-  for (const name of names) {
-    const element = document.querySelector<HTMLElement>(`[data-tour="${name}"]`)
-    if (element && element.getClientRects().length > 0) return element
-  }
-  return null
+const findTarget = (name: string): HTMLElement | null => {
+  const element = document.querySelector<HTMLElement>(`[data-tour="${name}"]`)
+  return element && element.getClientRects().length > 0 ? element : null
 }
 
 const measure = (element: HTMLElement): Box => {
@@ -109,45 +158,50 @@ function cardPosition(box: Box | null): React.CSSProperties {
 }
 
 function TourPanel() {
+  const [plan] = useState(() => tourFor(window.location.hash))
+  const [steps, setSteps] = useState<readonly TourStep[] | null>(null)
   const [index, setIndex] = useState(0)
   const [box, setBox] = useState<Box | null>(null)
   const startHash = useRef(window.location.hash)
   const nextRef = useRef<HTMLButtonElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
-  const step = STEPS[index] ?? STEPS[0]
-  const isLast = index === STEPS.length - 1
+  const step = steps?.[index]
+  const isLast = steps !== null && index === steps.length - 1
 
+  // Moves to the person's main screen, then keeps only the steps that exist there.
   useEffect(() => {
-    if (!step) return
+    const href = hrefFor(plan.main)
+    if (window.location.hash !== href) window.location.replace(href)
     let cancelled = false
-    let target: HTMLElement | null = null
-    const href = hrefFor(step.route)
-    // Replaces history, so Back leaves the page instead of stepping through the tour.
-    const needsRoute = window.location.hash !== href
-    if (needsRoute) window.location.replace(href)
-
-    const update = () => {
-      if (target) setBox(measure(target))
-    }
     const started = Date.now()
-    const locate = () => {
+    const check = () => {
       if (cancelled) return
-      target = findTarget(step, Date.now() - started > 400)
-      if (target) {
-        // On a phone the card covers the lower half, so the target goes to the top.
-        target.scrollIntoView({ block: window.innerWidth < 640 ? 'start' : 'center' })
-        update()
-        nextRef.current?.focus()
-      } else if (Date.now() - started < 800) {
-        window.setTimeout(locate, 40)
+      const ready = plan.steps.some((item) => item.target !== SWITCH_VIEW.target && findTarget(item.target))
+      if (ready || Date.now() - started > 800) {
+        setSteps(plan.steps.filter((item) => findTarget(item.target)))
       } else {
-        // The target is not on screen, such as a request already resolved. Show the card alone.
-        setBox(null)
-        nextRef.current?.focus()
+        window.setTimeout(check, 40)
       }
     }
     // Lets a route change render first, so the old page is never measured.
-    const first = window.setTimeout(locate, needsRoute ? 60 : 0)
+    const timer = window.setTimeout(check, 60)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [plan])
+
+  useEffect(() => {
+    if (!step) return
+    let target: HTMLElement | null = findTarget(step.target)
+    const update = () => {
+      target = target?.isConnected ? target : findTarget(step.target)
+      setBox(target ? measure(target) : null)
+    }
+    // On a phone the card covers the lower half, so the target goes to the top.
+    target?.scrollIntoView({ block: window.innerWidth < 640 ? 'start' : 'center' })
+    update()
+    nextRef.current?.focus()
 
     window.addEventListener('resize', update)
     window.addEventListener('scroll', update, true)
@@ -155,8 +209,6 @@ function TourPanel() {
     const observer = new ResizeObserver(update)
     observer.observe(document.body)
     return () => {
-      cancelled = true
-      window.clearTimeout(first)
       observer.disconnect()
       window.removeEventListener('resize', update)
       window.removeEventListener('scroll', update, true)
@@ -189,7 +241,7 @@ function TourPanel() {
     }
   }
 
-  if (!step) return null
+  if (!steps || !step) return <div aria-hidden className="fixed inset-0 z-[80]" />
 
   return (
     <div onKeyDown={onKeyDown}>
@@ -223,7 +275,7 @@ function TourPanel() {
           <X size={18} aria-hidden />
         </button>
         <p className="text-[13px] text-muted tabular-nums" aria-live="polite">
-          Step {index + 1} of {STEPS.length}
+          Step {index + 1} of {steps.length}
         </p>
         <h2 id="tour-title" className="mt-1 pr-8 text-xl leading-tight font-semibold">
           {step.title}

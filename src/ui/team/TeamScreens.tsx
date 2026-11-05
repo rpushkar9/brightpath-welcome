@@ -147,6 +147,7 @@ export function TeamView({ leader, today }: { leader: Leader; today: IsoDate }) 
           <h2 className="mb-2.5 text-xl font-semibold">{isHr ? 'All new hires' : 'Your new hires'}</h2>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
             <div
+              data-tour="roster"
               role="group"
               aria-label="Filter the roster"
               className="-mx-4 flex gap-1.5 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
@@ -168,6 +169,7 @@ export function TeamView({ leader, today }: { leader: Leader; today: IsoDate }) 
             </div>
             {isHr && (
               <a
+                data-tour="new-plan"
                 href={hrefFor({ screen: 'new', leaderId: leader.id })}
                 className={`${buttonPrimary} justify-center`}
               >
@@ -584,10 +586,12 @@ function WhyFlagged({
   hire,
   health,
   plan,
+  taskRoute,
 }: {
   hire: Hire
   health: RosterRow['health']
   plan: PlanTask[]
+  taskRoute: (taskId: string) => Route
 }) {
   return (
     <section className="rounded-panel border border-hairline bg-surface px-5 py-4">
@@ -596,7 +600,14 @@ function WhyFlagged({
       <ul className="mt-2 divide-y divide-hairline border-t border-hairline">
         {health.overdue.map((task) => (
           <li key={task.template.id} className="py-2 text-sm">
-            <span className="font-medium break-words">{task.template.title}</span>
+            <a
+              href={hrefFor(taskRoute(task.template.id))}
+              data-task-link={`why:${task.template.id}`}
+              onClick={(event) => openTask(event, taskRoute(task.template.id))}
+              className="font-medium break-words underline decoration-control underline-offset-2 hover:text-accent-strong"
+            >
+              {task.template.title}
+            </a>
             <span className="block text-[13px] text-muted">
               {task.status.kind === 'overdue' ? lateText(task.status.daysLate) : ''}. Owner:{' '}
               {ownerName(task.template.owner, hire)}
@@ -627,6 +638,8 @@ function NudgePanel({
     (task) => task.status.kind === 'overdue' && task.template.owner !== 'employee',
   )
   const nudged = hasNudgedToday(data, hire.id, today)
+  const nudgedTaskId = data.nudges.find((item) => item.hireId === hire.id && item.on === today)?.taskId
+  const nudgedAbout = plan.find((task) => task.template.id === nudgedTaskId)?.template.title
 
   if (!target && !nudged && others.length === 0) return null
 
@@ -652,7 +665,12 @@ function NudgePanel({
           </p>
         </>
       )}
-      {nudged && <p className="mt-1 text-[15px] font-medium text-accent-strong">Nudged today</p>}
+      {nudged && (
+        <p className="mt-1 text-[15px] font-medium text-accent-strong">
+          Nudged today
+          {nudgedAbout && ` about “${nudgedAbout}”`}
+        </p>
+      )}
       {others.length > 0 && (
         <ul className="mt-2 space-y-1 text-sm text-muted">
           {others.map((task) => (
@@ -730,7 +748,14 @@ export function HireDetail({
         <div className="lg:order-last">
           <NudgePanel persona={persona} hire={hire} plan={plan} today={today} />
         </div>
-        {flagged && <WhyFlagged hire={hire} health={health} plan={plan} />}
+        {flagged && (
+          <WhyFlagged
+            hire={hire}
+            health={health}
+            plan={plan}
+            taskRoute={(id) => ({ screen: 'hire', leaderId: leader.id, hireId: hire.id, taskId: id })}
+          />
+        )}
       </div>
       <p className="mb-3 text-[15px]">
         {done} of {total} done. This plan has {company} company tasks and {total - company} {dept}{' '}

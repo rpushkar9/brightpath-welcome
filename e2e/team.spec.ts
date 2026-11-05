@@ -233,6 +233,64 @@ test.describe('nudge', () => {
   })
 })
 
+test.describe('links to the task being discussed', () => {
+  test('a nudge links to its task, and goes away once the task is done', async ({ page }) => {
+    await openApp(page, '#/team/david/hire/priya-nair')
+    await page.getByRole('button', { name: 'Nudge Priya' }).click()
+    await expect(page.getByText('Nudged today about “Choose your benefits”')).toBeVisible()
+
+    await page.goto('/#/me/priya-nair')
+    const note = page.getByRole('status').filter({ hasText: 'David checked in' })
+    await note.getByRole('link', { name: 'View task' }).click()
+    await expect(page).toHaveURL(/task\/c-benefits$/)
+    const drawer = page.getByRole('dialog')
+    await expect(drawer).toContainText('Choose your benefits')
+    await drawer.getByRole('button', { name: 'Mark complete' }).click()
+    await expect(drawer.getByRole('button', { name: 'Undo completion' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByText('David checked in')).toHaveCount(0)
+    await expect(page.locator('main')).toBeFocused()
+  })
+
+  test('a nudged person can ask for help right from the note', async ({ page }) => {
+    await openApp(page, '#/team/david/hire/priya-nair')
+    await page.getByRole('button', { name: 'Nudge Priya' }).click()
+    await page.goto('/#/me/priya-nair')
+    const note = page.getByRole('status').filter({ hasText: 'David checked in' })
+    await note.getByRole('button', { name: /Need help/ }).click()
+    await page.getByRole('button', { name: 'Send request' }).click()
+    await expect(note).toContainText('Request sent to David')
+  })
+
+  test('why flagged links to the late task', async ({ page }) => {
+    await openApp(page, '#/team/renee/hire/marcus-webb')
+    await page.locator('[data-task-link="why:s-territory"]').click()
+    await expect(page).toHaveURL(/task\/s-territory$/)
+    await expect(page.getByRole('dialog').getByRole('button', { name: 'Mark complete' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-task-link="why:s-territory"]')).toBeFocused()
+  })
+
+  test('a blocked task links to what it is waiting on, and Back returns to it', async ({ page }) => {
+    await openApp(page, '#/me/emily-carter')
+    await page.locator('[data-task-link="e-local-setup"]').click()
+    const drawer = page.getByRole('dialog')
+    await drawer.getByRole('link', { name: '“Grant repository access”' }).click()
+    await expect(page).toHaveURL(/task\/e-repo-grant$/)
+    await expect(drawer).toContainText('IT owns this task')
+    await page.goBack()
+    await expect(page).toHaveURL(/task\/e-local-setup$/)
+    await expect(drawer).toContainText('Run the local setup')
+  })
+
+  test('a request links to its task', async ({ page }) => {
+    await openApp(page, '#/me/tomas-rivera')
+    const requests = page.getByRole('heading', { name: 'Your requests' }).locator('..')
+    await requests.getByRole('link', { name: 'View task' }).click()
+    await expect(page).toHaveURL(/task\/s-crm$/)
+  })
+})
+
 test.describe('start a new plan', () => {
   const fill = async (
     page: Page,

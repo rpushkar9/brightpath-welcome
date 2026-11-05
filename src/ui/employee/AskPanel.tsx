@@ -132,6 +132,19 @@ export function YourRequests({ hire }: { hire: Hire }) {
         {requests.map((request) => (
           <li key={request.id} className="px-4 py-3 text-sm">
             <p className="break-words">{request.message}</p>
+            {request.taskId && (
+              <a
+                href={hrefFor({ screen: 'home', hireId: hire.id, taskId: request.taskId })}
+                data-task-link={`request:${request.id}`}
+                onClick={(event) =>
+                  request.taskId &&
+                  openTask(event, { screen: 'home', hireId: hire.id, taskId: request.taskId })
+                }
+                className="mt-1 inline-flex min-h-6 items-center text-[13px] font-semibold text-accent underline underline-offset-2 hover:text-accent-strong"
+              >
+                View task
+              </a>
+            )}
             <p className={`mt-1 text-[13px] font-medium ${request.status === 'open' ? 'text-waiting' : 'text-done'}`}>
               {request.status === 'open'
                 ? `Sent to ${leaderById(request.toLeaderId)?.name ?? 'your manager'} on ${formatShort(request.on)}. Waiting for a response.`

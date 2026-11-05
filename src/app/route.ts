@@ -97,6 +97,13 @@ export function hrefFor(route: Route): string {
   }
 }
 
+/** The same screen, with a task's drawer open. */
+export function withTask(route: Route, taskId: string): Route {
+  return route.screen === 'home' || route.screen === 'plan' || route.screen === 'hire'
+    ? { ...route, taskId }
+    : route
+}
+
 export const navigate = (route: Route): void => {
   window.location.hash = hrefFor(route)
 }

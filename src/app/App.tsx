@@ -9,6 +9,7 @@ import { useStore } from '../store/store'
 import { UNDO_TOAST_ID } from '../ui/actions'
 import { MessageScreen } from '../ui/Shell'
 import { Tour } from '../ui/Tour'
+import { claimFirstVisit, startTour } from '../ui/tourState'
 import { EmployeeHome, EmployeePlan } from '../ui/employee/EmployeeScreens'
 import { HireDetail, NewHireForm, TeamView } from '../ui/team/TeamScreens'
 import { hrefFor, takeOverlayTrigger, useRoute, type Route } from './route'
@@ -54,6 +55,17 @@ function Screen() {
       ;(link ?? document.querySelector<HTMLElement>('main'))?.focus()
     })
   }, [hasOverlay])
+
+  // The first time someone arrives on their main screen, their tour opens by itself.
+  // A link to a specific task or a bad link is left alone, and counts as not yet seen.
+  const isMainScreen = route.screen === 'team' || (route.screen === 'home' && route.taskId === null)
+  const personExists =
+    route.screen === 'home'
+      ? data.hires.some((hire) => hire.id === route.hireId)
+      : route.screen === 'team' && leaderById(route.leaderId) !== undefined
+  useEffect(() => {
+    if (viewer && isMainScreen && personExists && claimFirstVisit(viewer)) startTour()
+  }, [viewer, isMainScreen, personExists])
 
   // An Undo offer belongs to the person who acted, so it must not follow a switch to someone else.
   useEffect(() => {

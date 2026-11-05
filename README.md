@@ -21,7 +21,7 @@ npm run dev
 
 Open the URL that Vite prints. It is usually http://localhost:5173.
 
-The prototype has no login. To learn it quickly, click **Show me around** at the top right for a 7-step tour. On a phone, it is in the **View as** menu, which also switches people and resets the demo data.
+The prototype has no login. A short tour opens by itself the first time each person is viewed in a browser. To replay it, click **Show me around** at the top right. On a phone, it is in the **View as** menu, which also switches people and resets the demo data.
 
 To see the employee and manager views update together, open the app in two windows and choose a different person in each.
 
@@ -58,7 +58,8 @@ David wants department-specific requirements. Emily does not want to see 40 task
 - A form that starts a new plan. The preview changes with the department, and the form rejects bad input.
 
 **Across the app**
-- A guided tour across the new hire, manager, and HR views. It works by keyboard and on phones, and it changes no data.
+- A guided tour for each person's view, which opens on their first visit and can be replayed. It works by keyboard and on phones, and it changes no data.
+- Links to the task being discussed, from nudges, help requests, reasons for a flag, and blocked tasks.
 - Changes persist through a refresh and sync live between tabs.
 - Every screen has its own link, and bad links show a clear message.
 - Sample dates are relative to the day the data was created, so the demo does not go stale.
@@ -111,7 +112,7 @@ The full exclusions table is in [docs/plan.md](docs/plan.md).
 
 ```bash
 npm test             # 174 unit tests
-npm run test:e2e     # 113 browser tests, using your installed Chrome
+npm run test:e2e     # 125 browser tests, using your installed Chrome
 npm run build        # type-check and production build
 ```
 

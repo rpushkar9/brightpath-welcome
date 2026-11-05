@@ -47,7 +47,8 @@ See section 4 of [plan.md](plan.md).
 | D14 | Help requests stay in the app, and go to whoever can act | Prefilled email | Works end to end with no invented addresses, and managers see it in one place |
 | D15 | Help requests have only open and resolved | Threaded replies | A reply needs a real messaging product. Status is enough to show the idea |
 | D16 | Time estimates count unknown tasks instead of guessing, and round to 15 minutes | One confident total | Six tasks have no sensible estimate, and a falsely precise number would mislead |
-| D17 | A hand-built tour that blocks clicks and starts only when asked | A tour library, or auto-starting on first visit | No new dependency. It cannot change data, and it never gets in the way of a demo or a returning user |
+| D17 | A hand-built tour for each person, opening once on their first visit, with a button to replay it | A tour library, or one tour across all roles | No new dependency, and it cannot change data. A new hire should not be walked through HR's screen. It waits if someone arrives through a link to a task, and resetting demo data does not bring it back |
+| D18 | Anything that mentions a task links to it | Text only | People should not have to hunt for what a nudge or flag refers to |
 | D10 | Radix primitives styled directly | The full shadcn setup | shadcn wraps these same primitives, and we only need a drawer and a menu |
 
 ## Approved decisions

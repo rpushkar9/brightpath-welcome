@@ -101,7 +101,7 @@ function PersonaMenu({ persona }: { persona: Persona | null }) {
             <Menu.Item className={itemClass} onSelect={() => startTour()}>
               <span className="min-w-0">
                 <span className="block font-medium">Show me around</span>
-                <span className="block text-xs text-muted">A quick tour of the whole story</span>
+                <span className="block text-xs text-muted">A short tour of this person’s view</span>
               </span>
               <Compass size={16} aria-hidden className="shrink-0 text-muted" />
             </Menu.Item>

@@ -190,7 +190,7 @@ function NextSteps({ plan, hire, persona }: { plan: PlanTask[]; hire: Hire; pers
               : 'Anything still open is with someone else, and you’ll see it here when it’s ready for you.'}
           </p>
         </div>
-        <p className="mt-3 text-sm text-muted">{planLink}</p>
+        <p data-tour="full-plan" className="mt-3 text-sm text-muted">{planLink}</p>
       </>
     )
   }
@@ -215,7 +215,7 @@ function NextSteps({ plan, hire, persona }: { plan: PlanTask[]; hire: Hire; pers
           />
         ))}
       </ul>
-      <p className="mt-3 text-sm text-muted">
+      <p data-tour="full-plan" className="mt-3 text-sm text-muted">
         {moreCount > 0 && <>{moreCount} more open in your plan. </>}
         {planLink}
       </p>
@@ -310,7 +310,7 @@ function ComingUp({ plan, hire }: { plan: PlanTask[]; hire: Hire }) {
   )
 }
 
-function NudgeNote({ hire, plan }: { hire: Hire; plan: PlanTask[] }) {
+function NudgeNote({ hire, plan, persona }: { hire: Hire; plan: PlanTask[]; persona: Persona }) {
   const { data } = useStore()
   const nudge = data.nudges.find((item) => {
     const task = plan.find((planTask) => planTask.template.id === item.taskId)
@@ -318,15 +318,29 @@ function NudgeNote({ hire, plan }: { hire: Hire; plan: PlanTask[] }) {
   })
   const task = nudge && plan.find((item) => item.template.id === nudge.taskId)
   if (!nudge || !task) return null
+  const route: Route = { screen: 'home', hireId: hire.id, taskId: task.template.id }
   return (
     <div
       role="status"
       className="mb-5 flex items-start gap-3 rounded-panel border border-soon-tint bg-soon-tint px-4 py-3 text-sm"
     >
-      <p className="flex-1 leading-relaxed">
-        <span className="font-semibold">{firstName(nudge.fromName)} checked in</span> about “
-        {task.template.title}”. If something is in your way, let them know.
-      </p>
+      <div className="min-w-0 flex-1">
+        <p className="leading-relaxed">
+          <span className="font-semibold">{firstName(nudge.fromName)} checked in</span> about “
+          {task.template.title}”. If something is in your way, let them know.
+        </p>
+        <div className="mt-1 -ml-2 flex flex-wrap items-center gap-1">
+          <a
+            href={hrefFor(route)}
+            data-task-link={`nudge:${task.template.id}`}
+            onClick={(event) => openTask(event, route)}
+            className="inline-flex min-h-11 items-center rounded-control px-2 font-semibold text-accent-strong underline underline-offset-2 hover:bg-white/60"
+          >
+            View task
+          </a>
+          <NeedHelp hire={hire} persona={persona} task={task} />
+        </div>
+      </div>
       <button
         type="button"
         aria-label="Dismiss this note"
@@ -392,7 +406,7 @@ export function EmployeeHome({
         </>
       }
     >
-      <NudgeNote hire={hire} plan={plan} />
+      <NudgeNote hire={hire} plan={plan} persona={persona} />
       {isComplete ? (
         <div className="max-w-2xl rounded-panel border border-hairline bg-surface px-5 py-6">
           <CircleCheck size={28} aria-hidden className="text-done" />
@@ -401,6 +415,7 @@ export function EmployeeHome({
             You can look back through everything you completed, and undo anything marked by mistake.
           </p>
           <a
+            data-tour="full-plan"
             href={hrefFor({ screen: 'plan', hireId: hire.id, taskId: null })}
             className="mt-4 inline-flex min-h-11 items-center rounded-control border border-control px-4 font-medium transition-colors duration-100 hover:bg-canvas"
           >

@@ -1,12 +1,13 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { ChevronRight, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { closeOverlay, type Route } from '../app/route'
+import { closeOverlay, hrefFor, withTask, type Route } from '../app/route'
 import { formatLong } from '../domain/dates'
 import { RESOURCE_EXCERPTS } from '../domain/resources'
 import { canAct, isOwner, ownerName } from '../domain/rules'
 import type { Hire, Persona, PlanTask } from '../domain/types'
 import { NeedHelp } from './NeedHelp'
+import { openTask } from './TaskRow'
 import { completeAction, undoAction } from './actions'
 import { CONFIRMATION_NOTE, STATUS_TONE, StatusIcon, scopeLabel, statusLabel } from './status'
 
@@ -20,13 +21,35 @@ function ownerText(task: PlanTask, hire: Hire, persona: Persona): string {
   return ownerName(owner, hire)
 }
 
-function NotAvailableNote({ task, hire, persona }: { task: PlanTask; hire: Hire; persona: Persona }) {
+function NotAvailableNote({
+  task,
+  hire,
+  persona,
+  parent,
+}: {
+  task: PlanTask
+  hire: Hire
+  persona: Persona
+  parent: Route
+}) {
   const { status } = task
   if (status.kind === 'waiting') {
+    const route = task.template.requires ? withTask(parent, task.template.requires) : null
     return (
       <p className="text-sm text-waiting">
-        Waiting on {ownerName(status.onOwner, hire)} to finish “{status.onTitle}”. It opens as soon as
-        that is done.
+        Waiting on {ownerName(status.onOwner, hire)} to finish{' '}
+        {route ? (
+          <a
+            href={hrefFor(route)}
+            onClick={(event) => openTask(event, route)}
+            className="font-medium underline underline-offset-2"
+          >
+            “{status.onTitle}”
+          </a>
+        ) : (
+          `“${status.onTitle}”`
+        )}
+        . It opens as soon as that is done.
       </p>
     )
   }
@@ -79,10 +102,12 @@ function DrawerContent({
   task,
   hire,
   persona,
+  parent,
 }: {
   task: PlanTask
   hire: Hire
   persona: Persona
+  parent: Route
 }) {
   const allowed = canAct(persona, hire, task.template.owner)
   const { status, template } = task
@@ -135,7 +160,7 @@ function DrawerContent({
       </div>
 
       <div className="border-t border-hairline px-6 py-4">
-        <NotAvailableNote task={task} hire={hire} persona={persona} />
+        <NotAvailableNote task={task} hire={hire} persona={persona} parent={parent} />
         {canComplete && (
           <p className="mb-3 text-[13px] leading-snug text-muted">{CONFIRMATION_NOTE}</p>
         )}
@@ -213,7 +238,7 @@ export function TaskDrawer({
           }}
         >
           {task ? (
-            <DrawerContent task={task} hire={hire} persona={persona} />
+            <DrawerContent task={task} hire={hire} persona={persona} parent={parent} />
           ) : (
             <div className="flex-1 px-6 pt-5">
               <Dialog.Title className="pr-10 font-display text-2xl font-semibold">

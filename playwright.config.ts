@@ -10,6 +10,16 @@ export default defineConfig({
     // Uses the installed Chrome, so running the tests needs no browser download.
     channel: 'chrome',
     viewport: { width: 1440, height: 900 },
+    // First-visit tours are tested on their own, and would otherwise cover every other test.
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: 'http://localhost:5199',
+          localStorage: [{ name: 'brightpath-welcome:tour-seen', value: '*' }],
+        },
+      ],
+    },
   },
   webServer: {
     command: 'npx vite --port 5199 --strictPort',
