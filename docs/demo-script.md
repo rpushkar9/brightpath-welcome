@@ -74,12 +74,14 @@ Click **Start a new plan**. Click **Start plan** with empty fields. Choose Engin
 > I left out real login, documents, e-signature, email, a template editor, and a real AI model, which would need a secure backend. MangoApps' public site already advertises template matching and AI-drafted plans, so I focused on the moment a new hire asks what to do first.
 >
 > Next, I'd ask Sarah four things. Which tasks must every department do? Which dates are legally fixed? What would actually make you step in for a new hire? And who chases IT today?
+>
+> Today's answers use simple rules, and the screen says so. Next, I'd put a model behind a secure backend. It could only answer from approved sources it cites, and sensitive questions would go to HR. It could never mark a task done or judge an employee.
 
 ## 4:20 How I checked the AI's work (15 seconds)
 
 Show `docs/ai-review-log.md` briefly.
 
-> I built this with Claude Code and had Codex review it. I kept a log of what I caught. One example: a test for a double-click bug still passed when I removed the fix, so I rewrote it until it could fail.
+> I built this with Claude Code, with independent AI reviews, and kept a log of what I caught. One example: every test passed while the tour's spotlight pointed at empty space. I only saw it by looking, so I added tests for it.
 
 ## If something goes wrong while recording
 

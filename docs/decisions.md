@@ -46,6 +46,8 @@ See section 4 of [plan.md](plan.md).
 | D13 | Questions use simple rules over the real plan, labelled "not AI" | A real AI model | A public static site cannot hold an API key, and a model needs a backend. Rules are reliable and honest for a demo |
 | D14 | Help requests stay in the app, and go to whoever can act | Prefilled email | Works end to end with no invented addresses, and managers see it in one place |
 | D15 | Help requests have only open and resolved | Threaded replies | A reply needs a real messaging product. Status is enough to show the idea |
+| D16 | Time estimates count unknown tasks instead of guessing, and round to 15 minutes | One confident total | Six tasks have no sensible estimate, and a falsely precise number would mislead |
+| D17 | A hand-built tour that blocks clicks and starts only when asked | A tour library, or auto-starting on first visit | No new dependency. It cannot change data, and it never gets in the way of a demo or a returning user |
 | D10 | Radix primitives styled directly | The full shadcn setup | shadcn wraps these same primitives, and we only need a drawer and a menu |
 
 ## Approved decisions
