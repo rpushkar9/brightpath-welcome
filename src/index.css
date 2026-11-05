@@ -72,6 +72,11 @@
   }
 }
 
+/* Keeps tour targets clear of the screen edge when scrolled to the top. */
+[data-tour] {
+  scroll-margin-top: 16px;
+}
+
 /* Rows and progress share these so state changes feel like one system. */
 .progress-fill {
   transition: width 300ms var(--ease-out-soft);

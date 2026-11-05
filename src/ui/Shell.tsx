@@ -1,6 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import * as Menu from '@radix-ui/react-dropdown-menu'
-import { Check, ChevronDown, RotateCcw } from 'lucide-react'
+import { Check, ChevronDown, Compass, RotateCcw } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { hrefFor, navigate, type Route } from '../app/route'
@@ -8,6 +8,7 @@ import { formatShort } from '../domain/dates'
 import { LEADERS } from '../domain/people'
 import type { Persona } from '../domain/types'
 import { store, useStore } from '../store/store'
+import { startTour } from './tourState'
 
 export const BAND_H1 =
   'font-display text-[clamp(1.875rem,1.4rem+2vw,3rem)] leading-[1.08] font-semibold break-words'
@@ -61,7 +62,7 @@ function PersonaMenu({ persona }: { persona: Persona | null }) {
   return (
     <>
       <Menu.Root>
-        <Menu.Trigger className="flex min-h-11 min-w-0 cursor-pointer items-center gap-2 rounded-control border border-band-line px-2.5 text-sm text-white transition-colors duration-100 hover:bg-white/10">
+        <Menu.Trigger data-tour="view-as" className="flex min-h-11 min-w-0 cursor-pointer items-center gap-2 rounded-control border border-band-line px-2.5 text-sm text-white transition-colors duration-100 hover:bg-white/10">
           <span className="truncate">
             {currentName && <span className="hidden text-band-soft sm:inline">View as </span>}
             <span className="font-medium">{currentName ?? 'Choose a person'}</span>
@@ -97,6 +98,13 @@ function PersonaMenu({ persona }: { persona: Persona | null }) {
               )}
             </Menu.Group>
             <Menu.Separator className="my-1.5 h-px bg-hairline" />
+            <Menu.Item className={itemClass} onSelect={() => startTour()}>
+              <span className="min-w-0">
+                <span className="block font-medium">Show me around</span>
+                <span className="block text-xs text-muted">A quick tour of the whole story</span>
+              </span>
+              <Compass size={16} aria-hidden className="shrink-0 text-muted" />
+            </Menu.Item>
             <Menu.Item className={itemClass} onSelect={() => setConfirmReset(true)}>
               <span className="min-w-0">
                 <span className="block font-medium">Reset demo data</span>
@@ -214,7 +222,17 @@ export function Shell({
         <div className="relative mx-auto max-w-[1120px] px-4 sm:px-8">
           <div className="flex items-center justify-between gap-3 py-3">
             <Logo />
-            <PersonaMenu persona={persona} />
+            <div className="flex min-w-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={startTour}
+                className="hidden min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-control px-2.5 text-sm font-medium text-white transition-colors duration-100 hover:bg-white/10 lg:inline-flex"
+              >
+                <Compass size={16} aria-hidden />
+                Show me around
+              </button>
+              <PersonaMenu persona={persona} />
+            </div>
           </div>
           <div className={compact ? 'pb-4 sm:pb-5' : 'pt-3 pb-5 sm:pt-7 sm:pb-7'}>{band}</div>
         </div>

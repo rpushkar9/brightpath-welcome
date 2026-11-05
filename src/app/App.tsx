@@ -8,6 +8,7 @@ import type { Persona } from '../domain/types'
 import { useStore } from '../store/store'
 import { UNDO_TOAST_ID } from '../ui/actions'
 import { MessageScreen } from '../ui/Shell'
+import { Tour } from '../ui/Tour'
 import { EmployeeHome, EmployeePlan } from '../ui/employee/EmployeeScreens'
 import { HireDetail, NewHireForm, TeamView } from '../ui/team/TeamScreens'
 import { hrefFor, takeOverlayTrigger, useRoute, type Route } from './route'
@@ -153,6 +154,7 @@ export function App() {
   return (
     <>
       <Screen />
+      <Tour />
       <Toaster
         position="bottom-center"
         toastOptions={{

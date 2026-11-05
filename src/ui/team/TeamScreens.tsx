@@ -364,7 +364,7 @@ function NextActions({
   const it = items.filter((item) => item.task.template.owner === 'it')
 
   return (
-    <section className="mb-7">
+    <section data-tour="next-actions" className="mb-7">
       <h2 className="mb-2.5 text-xl font-semibold">Your next actions</h2>
       {items.length === 0 ? (
         <p className="text-[15px] text-muted">Nothing needs you right now.</p>
@@ -492,7 +492,7 @@ function AttentionSection({
   const flagged = rows.filter((row) => row.health.kind === 'needs-attention' || row.health.kind === 'watch')
   if (flagged.length === 0) return null
   return (
-    <section className="mb-7">
+    <section data-tour="attention" className="mb-7">
       <h2 className="mb-2.5 text-xl font-semibold">Who needs attention</h2>
       <ul className={`grid gap-3 ${flagged.length === 3 ? 'lg:grid-cols-3' : flagged.length > 1 ? 'md:grid-cols-2' : ''}`}>
         {flagged.map((row) => (
@@ -516,7 +516,7 @@ function HelpRequests({
   const requests = openRequestsFor(data, leader)
   if (requests.length === 0) return null
   return (
-    <section className="mb-7">
+    <section data-tour="help-requests" className="mb-7">
       <h2 className="mb-2.5 text-xl font-semibold">Help requests</h2>
       <ul className="divide-y divide-hairline overflow-hidden rounded-panel border border-hairline bg-surface">
         {requests.map((request) => {

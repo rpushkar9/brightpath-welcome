@@ -25,7 +25,7 @@ export function AskPanel({ hire, persona }: { hire: Hire; persona: Persona }) {
   }
 
   return (
-    <section aria-labelledby="ask-heading" className="rounded-[12px] bg-surface p-4 shadow-card ring-1 ring-hairline">
+    <section data-tour="ask" aria-labelledby="ask-heading" className="rounded-[12px] bg-surface p-4 shadow-card ring-1 ring-hairline">
       <h2 id="ask-heading" className="text-xl font-semibold">
         Have a question?
       </h2>

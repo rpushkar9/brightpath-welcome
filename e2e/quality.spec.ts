@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { openApp, watchForErrors } from './helpers'
 
 const SCREENS = [
@@ -122,5 +122,145 @@ test.describe('reduced motion', () => {
       .getByRole('dialog')
       .evaluate((element) => getComputedStyle(element).animationDuration)
     expect(duration).toBe('0.1s')
+  })
+})
+
+test.describe('tour', () => {
+  const card = (page: Page) => page.getByRole('dialog')
+
+  test('walks from new hire to manager to HR, then returns, without changing data', async ({ page }) => {
+    const noErrors = watchForErrors(page)
+    await openApp(page)
+    const before = await page.evaluate(() => localStorage.getItem('brightpath-welcome:v1'))
+    await page.getByRole('button', { name: 'Show me around' }).click()
+    await expect(card(page)).toContainText('Step 1 of 7')
+    await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeFocused()
+
+    const expected = [
+      ['Three tasks, not 18', /me\/emily-carter$/],
+      ['Waiting isn’t late', /me\/emily-carter$/],
+      ['Ask a question', /me\/emily-carter$/],
+      ['What a manager sees', /team\/david$/],
+      ['Requests reach the right person', /team\/sarah$/],
+      ['See it from any side', /team\/sarah$/],
+    ] as const
+    for (const [title, url] of expected) {
+      await page.getByRole('button', { name: 'Next', exact: true }).click()
+      await expect(card(page)).toContainText(title)
+      await expect(page).toHaveURL(url)
+    }
+
+    await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await expect(card(page)).toContainText('Requests reach the right person')
+    await page.getByRole('button', { name: 'Next', exact: true }).click()
+    await page.getByRole('button', { name: 'Finish' }).click()
+    await expect(card(page)).toHaveCount(0)
+    await expect(page).toHaveURL(/me\/emily-carter$/)
+    await expect(page.locator('main')).toBeFocused()
+    expect(await page.evaluate(() => localStorage.getItem('brightpath-welcome:v1'))).toBe(before)
+    noErrors()
+  })
+
+  // Every step: the spotlight is on the right element, and the card is fully on screen.
+  const TARGETS = ['journey', 'start-here', 'waiting', 'ask', 'attention', 'help-requests', 'view-as']
+
+  async function checkEveryStep(page: Page) {
+    for (const [index, name] of TARGETS.entries()) {
+      await expect(card(page)).toContainText(`Step ${index + 1} of 7`)
+      const target = page.locator(`[data-tour="${name}"]`)
+      await expect(async () => {
+        const spot = await page.locator('[data-tour-spotlight]').boundingBox()
+        const box = await target.boundingBox()
+        expect(spot && box && Math.abs(spot.x + 6 - box.x)).toBeLessThan(2)
+        expect(spot && box && Math.abs(spot.y + 6 - box.y)).toBeLessThan(2)
+      }).toPass({ timeout: 3000 })
+      await expect(card(page)).toBeInViewport({ ratio: 1 })
+      await expect(target).toBeInViewport()
+      if (index < TARGETS.length - 1) await page.getByRole('button', { name: 'Next', exact: true }).click()
+    }
+  }
+
+  test('puts the spotlight on the right element, with the card on screen, at every step', async ({ page }) => {
+    await openApp(page)
+    await page.getByRole('button', { name: 'Show me around' }).click()
+    await checkEveryStep(page)
+  })
+
+  test('the card does not cover its target on a desktop screen', async ({ page }) => {
+    await openApp(page)
+    await page.getByRole('button', { name: 'Show me around' }).click()
+    for (const [index, name] of TARGETS.entries()) {
+      await expect(card(page)).toContainText(`Step ${index + 1} of 7`)
+      const target = page.locator(`[data-tour="${name}"]`)
+      await expect(async () => {
+        const spot = await page.locator('[data-tour-spotlight]').boundingBox()
+        const box = await target.boundingBox()
+        expect(spot && box && Math.abs(spot.y + 6 - box.y)).toBeLessThan(2)
+      }).toPass({ timeout: 3000 })
+      const a = await card(page).boundingBox()
+      const b = await target.boundingBox()
+      if (a && b) {
+        const overlapX = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)
+        const overlapY = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)
+        expect(overlapX > 0 && overlapY > 0, `${name} is covered`).toBe(false)
+      }
+      if (index < TARGETS.length - 1) await page.getByRole('button', { name: 'Next', exact: true }).click()
+    }
+  })
+
+  test('blocks clicks on the page behind it', async ({ page }) => {
+    await openApp(page)
+    await page.getByRole('button', { name: 'Show me around' }).click()
+    await expect(card(page)).toBeVisible()
+    await page.mouse.click(280, 590)
+    await expect(page.locator('header')).toContainText('Whole plan: 6 of 18')
+    await expect(card(page)).toBeVisible()
+  })
+
+  test('works by keyboard, and Escape closes it where it started', async ({ page }) => {
+    await openApp(page, '#/me/marcus-webb')
+    await page.getByRole('button', { name: 'Show me around' }).click()
+    await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(card(page)).toContainText('Step 2 of 7')
+    await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeFocused()
+    // Focus stays inside the card.
+    for (let i = 0; i < 6; i += 1) await page.keyboard.press('Tab')
+    expect(await card(page).evaluate((element) => element.contains(document.activeElement))).toBe(true)
+    await page.keyboard.press('Escape')
+    await expect(card(page)).toHaveCount(0)
+    await expect(page).toHaveURL(/me\/marcus-webb$/)
+  })
+
+  test('still works when a step’s target is gone', async ({ page }) => {
+    await openApp(page, '#/team/sarah')
+    await page.getByRole('button', { name: /Mark.*resolved/i }).click()
+    await page.getByRole('button', { name: 'Show me around' }).click()
+    for (let i = 0; i < 5; i += 1) await page.getByRole('button', { name: 'Next', exact: true }).click()
+    await expect(card(page)).toContainText('Requests reach the right person')
+    await expect(page).toHaveURL(/team\/sarah$/)
+  })
+
+  test('has no accessibility violations', async ({ page }) => {
+    await openApp(page)
+    await page.getByRole('button', { name: 'Show me around' }).click()
+    await expect(card(page)).toBeVisible()
+    await page.waitForTimeout(400)
+    const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+    expect(violations.map((violation) => violation.id)).toEqual([])
+  })
+
+  test.describe('on a phone', () => {
+    test.use({ viewport: { width: 390, height: 844 } })
+
+    test('starts from the menu and stays on screen', async ({ page }) => {
+      await openApp(page)
+      await page.getByRole('button', { name: /Emily Carter/ }).click()
+      await page.getByRole('menuitem', { name: /Show me around/ }).click()
+      await expect(card(page)).toContainText('Step 1 of 7')
+      await checkEveryStep(page)
+      const overflows = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
+      expect(overflows).toBe(false)
+    })
   })
 })
