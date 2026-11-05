@@ -82,7 +82,7 @@ function Preview({ department }: { department: Department | null }) {
 
 export function NewHireForm({ leader, today }: { leader: Leader; today: IsoDate }) {
   const persona: Persona = { kind: 'leader', leader }
-  const teamRoute = { screen: 'team', leaderId: leader.id } as const
+  const teamRoute = { screen: 'people', leaderId: leader.id } as const
   const [name, setName] = useState('')
   const [title, setTitle] = useState('')
   const [department, setDepartment] = useState<Department | null>(null)
@@ -125,7 +125,7 @@ export function NewHireForm({ leader, today }: { leader: Leader; today: IsoDate 
     <Shell
       persona={persona}
       compact
-      back={{ label: 'Back to all new hires', route: teamRoute }}
+      back={{ label: 'Back to People', route: teamRoute }}
       band={
         <>
           <h1 className={BAND_H1_COMPACT}>Start a new plan</h1>
@@ -233,7 +233,7 @@ export function NewHireForm({ leader, today }: { leader: Leader; today: IsoDate 
         <section
           aria-labelledby="preview-heading"
           aria-live="polite"
-          className="self-start rounded-panel border border-hairline bg-surface px-5 py-4"
+          className="glass self-start rounded-card px-5 py-4"
         >
           <h2 id="preview-heading" className="mb-2 text-lg font-semibold">
             Plan preview

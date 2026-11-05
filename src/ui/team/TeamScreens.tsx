@@ -1,11 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { hrefFor, type Route } from '../../app/route'
+import { currentHrArea, hrefFor, rememberHrArea, type Route } from '../../app/route'
+import { activitySince, markSeen } from '../../domain/activity'
+import { latestSeq } from '../../domain/events'
+import { affectedSummary, taskInsights } from '../../domain/insights'
 import { formatShort } from '../../domain/dates'
 import { DEPARTMENT_LABEL, firstName, leaderById, SARAH } from '../../domain/people'
 import { buildPlan, hireHealth, progress, stageOf } from '../../domain/plan'
 import {
   blockedBy,
+  blockedElsewhere,
   canAct,
   canView,
   hasNudgedToday,
@@ -18,11 +22,11 @@ import {
   type LeaderAction,
   type RosterRow,
 } from '../../domain/rules'
-import type { HealthKind, Hire, IsoDate, Leader, Persona, PlanTask } from '../../domain/types'
+import type { Department, HealthKind, Hire, IsoDate, Leader, Persona, PlanTask } from '../../domain/types'
 import { openRequestsFor, resolveHelp } from '../../domain/help'
 import { store, useStore } from '../../store/store'
 import { PlanPhases } from '../PlanPhases'
-import { BAND_H1, BAND_H1_COMPACT, BackAtEnd, Shell, type BackLink } from '../Shell'
+import { Avatar, BAND_H1_COMPACT, BackAtEnd, Shell, type BackLink } from '../Shell'
 import { TaskDrawer } from '../TaskDrawer'
 import { openTask } from '../TaskRow'
 import { HealthChip, HEALTH_LABEL, statusLabel } from '../status'
@@ -93,195 +97,421 @@ function ProgressBar({ row }: { row: RosterRow }) {
       <span className="tabular-nums">
         {done} of {total}
       </span>
-      <span className="block h-1 w-28 max-w-full rounded-full bg-later-tint sm:mt-1.5" aria-hidden>
+      <span className="block h-1.5 w-28 max-w-full rounded-full bg-later-tint sm:mt-1.5" aria-hidden>
         <span className="block h-full rounded-full bg-accent" style={{ width: `${percent}%` }} />
       </span>
     </>
   )
 }
 
+const HEALTH_SEGMENTS: readonly { kind: HealthKind; tone: string }[] = [
+  { kind: 'needs-attention', tone: 'bg-[#f0a08c]' },
+  { kind: 'watch', tone: 'bg-path-marker' },
+  { kind: 'on-track', tone: 'bg-path-fill' },
+  { kind: 'complete', tone: 'bg-white/70' },
+]
+
+/** How the group is doing, as one bar. Each part also has a written count, so colour is not required. */
+function HealthStrip({ rows }: { rows: RosterRow[] }) {
+  if (rows.length === 0) return null
+  const parts = HEALTH_SEGMENTS.map((segment) => ({
+    ...segment,
+    count: rows.filter((row) => row.health.kind === segment.kind).length,
+  })).filter((segment) => segment.count > 0)
+  return (
+    <div className="mt-4">
+      <div aria-hidden className="flex h-2 gap-1 overflow-hidden rounded-full">
+        {parts.map((part) => (
+          <span key={part.kind} className={`rounded-full ${part.tone}`} style={{ flexGrow: part.count }} />
+        ))}
+      </div>
+      <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-[13px] text-band-soft">
+        {parts.map((part) => (
+          <li key={part.kind} className="flex items-center gap-1.5">
+            <span aria-hidden className={`size-2 rounded-full ${part.tone}`} />
+            <span>
+              <span className="font-semibold text-white tabular-nums">{part.count}</span> {HEALTH_LABEL[part.kind]}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/** New items since the last visit. They stay listed until the next visit. */
+function WhatChanged({ leader }: { leader: Leader }) {
+  const { data } = useStore()
+  const [baseline] = useState(() => data.seenThrough[leader.id] ?? 0)
+  const newest = latestSeq(data)
+  useEffect(() => {
+    if ((store.getSnapshot().data.seenThrough[leader.id] ?? 0) !== newest) {
+      store.update((current) => markSeen(current, leader.id))
+    }
+  }, [leader.id, newest])
+  const items = activitySince(data, leader, baseline).slice(0, 5)
+  return (
+    <section data-tour="what-changed" className="glass rounded-card p-4">
+      <h2 className="text-lg font-semibold">What changed since your last visit</h2>
+      {items.length === 0 ? (
+        <p className="mt-1 text-sm text-muted">Nothing new since your last visit.</p>
+      ) : (
+        <ul className="mt-2 space-y-2 text-sm">
+          {items.map(({ event, text }) => (
+            <li key={event.seq} className="flex gap-2 break-words">
+              <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent" />
+              {text}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+/** Work on the team that someone else owns, so it never looks like the manager's job. */
+function WithOthers({ persona, leader, today }: { persona: Persona; leader: Leader; today: IsoDate }) {
+  const { data } = useStore()
+  const items = blockedElsewhere(persona, data, today)
+  if (items.length === 0) return null
+  return (
+    <section data-tour="with-others">
+      <h2 className="mb-2.5 text-xl font-semibold">With IT or HR</h2>
+      <div className="glass rounded-card p-4">
+      <p className="text-[13px] text-muted">Not yours to do, but these are holding up your team.</p>
+      <ul className="mt-1 divide-y divide-hairline">
+        {items.map(({ hire, task, blocks }) => {
+          const route: Route = { screen: 'hire', leaderId: leader.id, hireId: hire.id, taskId: task.template.id }
+          return (
+            <li key={`${hire.id}:${task.template.id}`} className="py-2 text-sm">
+              <a
+                href={hrefFor(route)}
+                data-task-link={`others:${hire.id}:${task.template.id}`}
+                onClick={(event) => openTask(event, route)}
+                className="font-medium break-words underline decoration-control underline-offset-2 hover:text-accent-strong"
+              >
+                {task.template.title}
+              </a>
+              <span className="block text-[13px] text-muted">
+                {ownerName(task.template.owner, hire)}, for {hire.name}. {statusLabel(task.status, hire)}
+              </span>
+              <BlocksLine hire={hire} blocks={blocks} />
+            </li>
+          )
+        })}
+      </ul>
+      </div>
+    </section>
+  )
+}
+
+function InsightsTeaser({ leader, today }: { leader: Leader; today: IsoDate }) {
+  const { data } = useStore()
+  const top = taskInsights(data, today)[0]
+  return (
+    <section className="glass rounded-card p-4">
+      <h2 className="text-lg font-semibold">Where people get stuck</h2>
+      {top ? (
+        <p className="mt-1 text-sm break-words">
+          “{top.template.title}” comes up most often: {affectedSummary(top)}.
+        </p>
+      ) : (
+        <p className="mt-1 text-sm text-muted">Not enough activity to show a pattern yet.</p>
+      )}
+      <a
+        href={hrefFor({ screen: 'insights', leaderId: leader.id, taskId: null })}
+        className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-accent-strong underline underline-offset-2 hover:text-ink sm:min-h-8"
+      >
+        Open Insights
+      </a>
+    </section>
+  )
+}
+
 export function TeamView({ leader, today }: { leader: Leader; today: IsoDate }) {
   const { data } = useStore()
   const persona: Persona = { kind: 'leader', leader }
-  const [filter, setFilter] = useState<Filter>('all')
   const visible = data.hires.filter((hire) => canView(persona, hire))
   const rows = rosterOrder(visible, data, today)
   const count = (kind: HealthKind) => rows.filter((row) => row.health.kind === kind).length
-  const shown = filter === 'all' ? rows : rows.filter((row) => row.health.kind === filter)
   const isHr = leader.kind === 'hr'
-  const flaggedCount = count('needs-attention') + count('watch')
-  const hasHelp = openRequestsFor(data, leader).length > 0
-  const sideBySide = flaggedCount === 1 && !hasHelp
-  const route = (hire: Hire): Route => ({
-    screen: 'hire',
-    leaderId: leader.id,
-    hireId: hire.id,
-    taskId: null,
-  })
+
+  useEffect(() => {
+    if (isHr) rememberHrArea('overview')
+  }, [isHr])
 
   return (
     <Shell
       persona={persona}
+      compact
       band={
         <>
-          <h1 className={BAND_H1}>{headline(rows.length, count('needs-attention'), count('watch'))}</h1>
-          <p className="mt-2 text-[15px] text-band-soft">
+          <h1 className={BAND_H1_COMPACT}>{headline(rows.length, count('needs-attention'), count('watch'))}</h1>
+          <p className="mt-1.5 text-sm text-band-soft sm:text-[15px]">
             {subline(leader, rows, count('needs-attention'), count('watch'))}
           </p>
+          <HealthStrip rows={rows} />
         </>
       }
     >
       {rows.length > 0 && (
-        // One flagged person sits beside the actions, so neither panel leaves a gap.
-        <div className={sideBySide ? 'grid items-start gap-x-6 lg:grid-cols-2' : ''}>
-          <AttentionSection rows={rows} persona={persona} leader={leader} today={today} />
-          <div className={hasHelp ? 'grid items-start gap-x-6 lg:grid-cols-2' : ''}>
-            <NextActions persona={persona} leader={leader} today={today} narrow={hasHelp || sideBySide} />
-            {hasHelp && <HelpRequests leader={leader} persona={persona} today={today} />}
+        <div className="grid items-start gap-x-6 gap-y-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div className="min-w-0">
+            <AttentionSection rows={rows} persona={persona} leader={leader} today={today} />
+            {/* On phones, requests come before task lists, because someone is waiting on an answer. */}
+            <div className="mb-6 lg:hidden">
+              <HelpRequests leader={leader} persona={persona} today={today} />
+            </div>
+            <NextActions persona={persona} leader={leader} today={today} />
+          </div>
+          <div className="min-w-0 space-y-4">
+            <div className="hidden lg:block">
+              <HelpRequests leader={leader} persona={persona} today={today} />
+            </div>
+            {isHr ? (
+              <InsightsTeaser leader={leader} today={today} />
+            ) : (
+              <WithOthers persona={persona} leader={leader} today={today} />
+            )}
+            <WhatChanged leader={leader} />
           </div>
         </div>
       )}
-      {rows.length > 0 && (
-        <>
-          <h2 className="mb-2.5 text-xl font-semibold">{isHr ? 'All new hires' : 'Your new hires'}</h2>
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-            <div
-              data-tour="roster"
-              role="group"
-              aria-label="Filter the roster"
-              className="-mx-4 flex gap-1.5 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
-            >
-              {FILTERS.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  aria-pressed={filter === item.id}
-                  onClick={() => setFilter(item.id)}
-                  className="min-h-11 shrink-0 cursor-pointer rounded-control border border-hairline bg-surface px-3 text-sm font-medium whitespace-nowrap transition-colors duration-100 hover:border-control aria-pressed:border-accent aria-pressed:bg-accent-tint aria-pressed:text-accent-strong"
-                >
-                  {item.label}{' '}
-                  <span className="tabular-nums">
-                    ({item.id === 'all' ? rows.length : count(item.id)})
-                  </span>
-                </button>
-              ))}
-            </div>
-            {isHr && (
-              <a
-                data-tour="new-plan"
-                href={hrefFor({ screen: 'new', leaderId: leader.id })}
-                className={`${buttonPrimary} justify-center`}
-              >
-                Start a new plan
-              </a>
-            )}
-          </div>
+      {rows.length > 0 && !isHr && (
+        <section className="mt-2">
+          <h2 className="mb-2.5 text-xl font-semibold">Your new hires</h2>
+          <Roster rows={rows} leader={leader} today={today} />
+        </section>
+      )}
+      {rows.length > 0 && isHr && (
+        <a
+          href={hrefFor({ screen: 'people', leaderId: leader.id })}
+          className={`${buttonSecondary} mt-2`}
+        >
+          See all {rows.length} new hires
+        </a>
+      )}
+    </Shell>
+  )
+}
 
-          {shown.length === 0 ? (
-            <div className="rounded-panel border border-hairline bg-surface px-5 py-6">
-              <p className="max-w-prose text-[15px] leading-relaxed">
-                Nobody is marked “{FILTERS.find((item) => item.id === filter)?.label}” right now.
-              </p>
-              <button
-                type="button"
-                onClick={() => setFilter('all')}
-                className={`${buttonSecondary} mt-3`}
+export function PeopleView({ leader, today }: { leader: Leader; today: IsoDate }) {
+  const { data } = useStore()
+  const persona: Persona = { kind: 'leader', leader }
+  const isHr = leader.kind === 'hr'
+  const rows = rosterOrder(
+    data.hires.filter((hire) => canView(persona, hire)),
+    data,
+    today,
+  )
+  useEffect(() => {
+    if (isHr) rememberHrArea('people')
+  }, [isHr])
+  return (
+    <Shell
+      persona={persona}
+      compact
+      band={
+        <>
+          <h1 className={BAND_H1_COMPACT}>People</h1>
+          <p className="mt-1.5 text-sm text-band-soft sm:text-[15px]">
+            {rows.length} {rows.length === 1 ? 'new hire' : 'new hires'}, with those who need help first.
+          </p>
+        </>
+      }
+    >
+      <Roster rows={rows} leader={leader} today={today} />
+    </Shell>
+  )
+}
+
+type SortKey = 'need' | 'name' | 'start' | 'progress'
+type DepartmentFilter = 'all' | Department
+const isSortKey = (value: string): value is SortKey =>
+  value === 'need' || value === 'name' || value === 'start' || value === 'progress'
+const isDepartmentFilter = (value: string): value is DepartmentFilter =>
+  value === 'all' || value === 'engineering' || value === 'sales'
+
+function sortRows(rows: RosterRow[], key: SortKey): RosterRow[] {
+  const copy = [...rows]
+  if (key === 'name') return copy.sort((a, b) => a.hire.name.localeCompare(b.hire.name))
+  if (key === 'start') return copy.sort((a, b) => b.hire.startDate.localeCompare(a.hire.startDate))
+  if (key === 'progress') return copy.sort((a, b) => progress(a.plan).percent - progress(b.plan).percent)
+  return copy
+}
+
+function Roster({ rows, leader, today }: { rows: RosterRow[]; leader: Leader; today: IsoDate }) {
+  const { data } = useStore()
+  const [filter, setFilter] = useState<Filter>('all')
+  const [department, setDepartment] = useState<DepartmentFilter>('all')
+  const [sort, setSort] = useState<SortKey>('need')
+  const isHr = leader.kind === 'hr'
+  const inDepartment = rows.filter((row) => department === 'all' || row.hire.department === department)
+  const count = (kind: HealthKind) => inDepartment.filter((row) => row.health.kind === kind).length
+  const shown = sortRows(
+    filter === 'all' ? inDepartment : inDepartment.filter((row) => row.health.kind === filter),
+    sort,
+  )
+  const route = (hire: Hire): Route => ({ screen: 'hire', leaderId: leader.id, hireId: hire.id, taskId: null })
+  const clear = () => {
+    setFilter('all')
+    setDepartment('all')
+  }
+  const selectClass = 'min-h-11 rounded-control border border-control bg-surface px-2 text-sm'
+
+  return (
+    <>
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between">
+        <div
+          data-tour="roster"
+          role="group"
+          aria-label="Filter the roster"
+          className="-mx-4 flex gap-1.5 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
+        >
+          {FILTERS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={filter === item.id}
+              onClick={() => setFilter(item.id)}
+              className="min-h-11 shrink-0 cursor-pointer rounded-control border border-hairline bg-white/70 px-3 text-sm font-medium whitespace-nowrap transition-colors duration-100 hover:border-control aria-pressed:border-accent aria-pressed:bg-accent-tint aria-pressed:text-accent-strong"
+            >
+              {item.label}{' '}
+              <span className="tabular-nums">({item.id === 'all' ? inDepartment.length : count(item.id)})</span>
+            </button>
+          ))}
+        </div>
+        {isHr && (
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="text-[13px] text-muted">
+              <span className="mb-0.5 block">Department</span>
+              <select
+                value={department}
+                onChange={(event) => {
+                  if (isDepartmentFilter(event.target.value)) setDepartment(event.target.value)
+                }}
+                className={selectClass}
               >
-                Show everyone
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="hidden overflow-hidden rounded-panel border border-hairline bg-surface sm:block">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-hairline text-[13px] text-muted">
-                    <tr>
-                      <th scope="col" className="px-5 py-2.5 font-medium">Person</th>
-                      <th scope="col" className="px-3 py-2.5 font-medium">Stage</th>
-                      <th scope="col" className="px-3 py-2.5 font-medium">Progress</th>
-                      <th scope="col" className="px-3 py-2.5 font-medium">Status</th>
-                      <th scope="col" className="px-5 py-2.5 font-medium">Next due</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-hairline">
-                    {shown.map((row) => (
-                      <tr key={row.hire.id} className="relative align-top hover:bg-canvas">
-                        <td className="px-5 py-3.5">
-                          <a
-                            href={hrefFor(route(row.hire))}
-                            className={`font-medium break-words ${linkFocus}`}
-                          >
+                <option value="all">All</option>
+                <option value="engineering">Engineering</option>
+                <option value="sales">Sales</option>
+              </select>
+            </label>
+            <label className="text-[13px] text-muted">
+              <span className="mb-0.5 block">Sort by</span>
+              <select
+                value={sort}
+                onChange={(event) => {
+                  if (isSortKey(event.target.value)) setSort(event.target.value)
+                }}
+                className={selectClass}
+              >
+                <option value="need">Who needs help</option>
+                <option value="name">Name</option>
+                <option value="start">Newest start date</option>
+                <option value="progress">Least progress</option>
+              </select>
+            </label>
+            <a
+              data-tour="new-plan"
+              href={hrefFor({ screen: 'new', leaderId: leader.id })}
+              className={`${buttonPrimary} justify-center`}
+            >
+              Start a new plan
+            </a>
+          </div>
+        )}
+      </div>
+
+      {shown.length === 0 ? (
+        <div className="glass rounded-card px-5 py-6">
+          <p className="max-w-prose text-[15px] leading-relaxed">
+            {filter === 'all'
+              ? 'Nobody matches this department right now.'
+              : `Nobody is marked “${FILTERS.find((item) => item.id === filter)?.label}” right now.`}
+          </p>
+          <button type="button" onClick={clear} className={`${buttonSecondary} mt-3`}>
+            Show everyone
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="glass hidden overflow-hidden rounded-card sm:block">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-hairline text-[13px] text-muted">
+                <tr>
+                  <th scope="col" className="px-5 py-2.5 font-medium">Person</th>
+                  <th scope="col" className="px-3 py-2.5 font-medium">Stage</th>
+                  <th scope="col" className="px-3 py-2.5 font-medium">Progress</th>
+                  <th scope="col" className="px-3 py-2.5 font-medium">Status</th>
+                  <th scope="col" className="px-5 py-2.5 font-medium">Next due</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-hairline">
+                {shown.map((row) => (
+                  <tr key={row.hire.id} className="relative align-top transition-colors duration-100 hover:bg-white/60">
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={row.hire.name} size="sm" />
+                        <div className="min-w-0">
+                          <a href={hrefFor(route(row.hire))} className={`font-medium break-words ${linkFocus}`}>
                             {row.hire.name}
                           </a>
                           <p className="text-[13px] text-muted">
                             {row.hire.title}
                             {isHr && `, ${DEPARTMENT_LABEL[row.hire.department]}`}
                           </p>
-                        </td>
-                        <td className="px-3 py-3.5">
-                          {STAGE_LABEL[stageOf(row.hire, today)]}
-                          <p className="text-[13px] text-muted">{stageText(row.hire, today)}</p>
-                        </td>
-                        <td className="px-3 py-3.5">
-                          <ProgressBar row={row} />
-                        </td>
-                        <td className="px-3 py-3.5">
-                          <HealthChip kind={row.health.kind} />
-                          <p className="mt-1 text-[13px] text-muted">
-                            {healthReason(row.health, row.hire)}
-                          </p>
-                          {hasNudgedToday(data, row.hire.id, today) && (
-                            <p className="mt-0.5 text-[13px] font-medium text-accent-strong">
-                              Nudged today
-                            </p>
-                          )}
-                        </td>
-                        <td className="px-5 py-3.5 whitespace-nowrap tabular-nums">
-                          {nextDue(row.plan, today)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <ul className="divide-y divide-hairline overflow-hidden rounded-panel border border-hairline bg-surface sm:hidden">
-                {shown.map((row) => (
-                  <li key={row.hire.id} className="relative px-4 py-3.5 hover:bg-canvas">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <a
-                          href={hrefFor(route(row.hire))}
-                          className={`font-medium break-words ${linkFocus}`}
-                        >
-                          {row.hire.name}
-                        </a>
-                        <p className="text-[13px] break-words text-muted">
-                          {row.hire.title}
-                          {isHr && `, ${DEPARTMENT_LABEL[row.hire.department]}`}
-                        </p>
+                        </div>
                       </div>
+                    </td>
+                    <td className="px-3 py-3.5">
+                      {STAGE_LABEL[stageOf(row.hire, today)]}
+                      <p className="text-[13px] text-muted">{stageText(row.hire, today)}</p>
+                    </td>
+                    <td className="px-3 py-3.5">
+                      <ProgressBar row={row} />
+                    </td>
+                    <td className="px-3 py-3.5">
+                      <HealthChip kind={row.health.kind} />
+                      <p className="mt-1 text-[13px] text-muted">{healthReason(row.health, row.hire)}</p>
+                      {hasNudgedToday(data, row.hire.id, today) && (
+                        <p className="mt-0.5 text-[13px] font-medium text-accent-strong">Nudged today</p>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 whitespace-nowrap tabular-nums">{nextDue(row.plan, today)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <ul className="glass divide-y divide-hairline overflow-hidden rounded-card sm:hidden">
+            {shown.map((row) => (
+              <li key={row.hire.id} className="relative px-4 py-3">
+                <div className="flex items-start gap-3">
+                  <Avatar name={row.hire.name} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <a href={hrefFor(route(row.hire))} className={`font-medium break-words ${linkFocus}`}>
+                        {row.hire.name}
+                      </a>
                       <HealthChip kind={row.health.kind} />
                     </div>
-                    <p className="mt-1.5 text-[13px] text-muted">
+                    <p className="text-[13px] break-words text-muted">
                       {healthReason(row.health, row.hire)}
+                      {hasNudgedToday(data, row.hire.id, today) && '. Nudged today'}
                     </p>
-                    {hasNudgedToday(data, row.hire.id, today) && (
-                      <p className="mt-0.5 text-[13px] font-medium text-accent-strong">
-                        Nudged today
-                      </p>
-                    )}
-                    <div className="mt-1.5 flex items-center gap-3 text-sm">
+                    <div className="mt-1.5 flex items-center gap-3 text-[13px]">
                       <ProgressBar row={row} />
                     </div>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
         </>
       )}
-    </Shell>
+    </>
   )
 }
 
@@ -298,7 +528,7 @@ function ActionList({
   const shown = expanded ? items : items.slice(0, limit)
   return (
     <>
-      <ul className="divide-y divide-hairline overflow-hidden rounded-panel border border-hairline bg-surface">
+      <ul className="glass divide-y divide-hairline overflow-hidden rounded-card">
         {shown.map(({ hire, task, blocks }) => {
           const route: Route = {
             screen: 'hire',
@@ -309,7 +539,7 @@ function ActionList({
           return (
             <li
               key={`${hire.id}:${task.template.id}`}
-              className="relative px-4 py-2.5 transition-colors duration-100 hover:bg-canvas"
+              className="relative px-4 py-2.5 transition-colors duration-100 hover:bg-white/60"
             >
               <a
                 href={hrefFor(route)}
@@ -335,7 +565,7 @@ function ActionList({
           type="button"
           aria-expanded={expanded}
           onClick={() => setExpanded(!expanded)}
-          className="mt-1.5 inline-flex min-h-11 cursor-pointer items-center text-sm font-semibold text-accent underline underline-offset-2 hover:text-accent-strong sm:min-h-8"
+          className="mt-1.5 inline-flex min-h-11 cursor-pointer items-center text-sm font-semibold text-accent-strong underline underline-offset-2 hover:text-ink sm:min-h-8"
         >
           {expanded ? 'Show fewer' : `Show all ${items.length}`}
         </button>
@@ -344,7 +574,7 @@ function ActionList({
   )
 }
 
-// Actions stay short, so the people the headline names remain near the top of the screen.
+// Actions stay short, so the page stays easy to scan.
 const MANAGER_LIMIT = 3
 const HR_GROUP_LIMIT = 2
 
@@ -352,25 +582,39 @@ function NextActions({
   persona,
   leader,
   today,
-  narrow,
 }: {
   persona: Persona
   leader: Leader
   today: IsoDate
-  narrow: boolean
 }) {
   const { data } = useStore()
   const items = leaderActions(persona, data, today)
   const hr = items.filter((item) => item.task.template.owner === 'hr')
   const it = items.filter((item) => item.task.template.owner === 'it')
+  // Phones start with this collapsed when it is long, so people and requests come first.
+  const [open, setOpen] = useState(() => window.innerWidth >= 640 || items.length <= 2)
 
   return (
-    <section data-tour="next-actions" className="mb-7">
-      <h2 className="mb-2.5 text-xl font-semibold">Your next actions</h2>
-      {items.length === 0 ? (
-        <p className="text-[15px] text-muted">Nothing needs you right now.</p>
+    <section data-tour="next-actions" className="mb-2">
+      <h2 className="mb-2.5 text-xl font-semibold">
+        Your next actions{' '}
+        {items.length > 0 && (
+          <span className="text-base font-medium text-muted tabular-nums">({items.length})</span>
+        )}
+      </h2>
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="glass min-h-13 w-full cursor-pointer rounded-card px-4 py-2.5 text-left text-sm"
+        >
+          <span className="block font-medium break-words">{items[0]?.task.template.title}</span>
+          <span className="font-semibold text-accent">Show all {items.length}</span>
+        </button>
+      ) : items.length === 0 ? (
+        <p className="glass rounded-card p-4 text-[15px] text-muted">Nothing needs you right now.</p>
       ) : leader.kind === 'hr' ? (
-        <div className={`grid items-start gap-x-6 gap-y-5 ${narrow ? '' : 'md:grid-cols-2'}`}>
+        <div className="grid items-start gap-x-4 gap-y-5 md:grid-cols-2">
           <div>
             <h3 className="mb-1.5 font-sans text-sm font-semibold">HR tasks</h3>
             {hr.length > 0 ? (
@@ -431,19 +675,22 @@ function AttentionCard({
   }
 
   return (
-    <li className="rounded-panel border border-hairline bg-surface p-4 shadow-[0_1px_2px_rgba(18,56,47,0.05)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 id={headingId} className="font-sans text-base font-semibold break-words">
-            {hire.name}
-          </h3>
-          <p className="text-[13px] break-words text-muted">{hire.title}</p>
+    <li className="glass rounded-card p-4">
+      <div className="flex items-start gap-3">
+        <Avatar name={hire.name} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <h3 id={headingId} className="font-sans text-base font-semibold break-words">
+              {hire.name}
+            </h3>
+            <HealthChip kind={health.kind} />
+          </div>
+          <p className="hidden text-[13px] break-words text-muted sm:block">{hire.title}</p>
+          <p className="mt-1 text-[15px]">{healthReason(health, hire)}</p>
+          <BlocksLine hire={hire} blocks={blocks} />
         </div>
-        <HealthChip kind={health.kind} />
       </div>
-      <p className="mt-2 text-[15px]">{healthReason(health, hire)}</p>
-      <BlocksLine hire={hire} blocks={blocks} />
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div className="mt-2.5 flex flex-wrap items-center gap-2 sm:pl-[52px]">
         {target ? (
           <button
             type="button"
@@ -474,7 +721,7 @@ function AttentionCard({
           Open plan
         </a>
       </div>
-      {sentence && <p className="mt-2 text-[13px] text-muted">{sentence}</p>}
+      {sentence && <p className="mt-2 text-[13px] text-muted sm:pl-[52px]">{sentence}</p>}
     </li>
   )
 }
@@ -493,9 +740,9 @@ function AttentionSection({
   const flagged = rows.filter((row) => row.health.kind === 'needs-attention' || row.health.kind === 'watch')
   if (flagged.length === 0) return null
   return (
-    <section data-tour="attention" className="mb-7">
+    <section data-tour="attention" className="mb-6">
       <h2 className="mb-2.5 text-xl font-semibold">Who needs attention</h2>
-      <ul className={`grid gap-3 ${flagged.length === 3 ? 'lg:grid-cols-3' : flagged.length > 1 ? 'md:grid-cols-2' : ''}`}>
+      <ul className="grid gap-3">
         {flagged.map((row) => (
           <AttentionCard key={row.hire.id} row={row} persona={persona} leader={leader} today={today} />
         ))}
@@ -517,9 +764,11 @@ function HelpRequests({
   const requests = openRequestsFor(data, leader)
   if (requests.length === 0) return null
   return (
-    <section data-tour="help-requests" className="mb-7">
-      <h2 className="mb-2.5 text-xl font-semibold">Help requests</h2>
-      <ul className="divide-y divide-hairline overflow-hidden rounded-panel border border-hairline bg-surface">
+    <section data-tour="help-requests">
+      <h2 className="mb-2.5 text-xl font-semibold">
+        Help requests <span className="text-base font-medium text-muted tabular-nums">({requests.length})</span>
+      </h2>
+      <ul className="glass divide-y divide-hairline overflow-hidden rounded-card">
         {requests.map((request) => {
           const hire = data.hires.find((item) => item.id === request.hireId)
           if (!hire) return null
@@ -534,8 +783,13 @@ function HelpRequests({
           }
           return (
             <li key={request.id} className="px-4 py-3">
-              <p className="font-medium break-words">{hire.name}</p>
-              {task && <p className="text-[13px] break-words text-muted">{task.template.title}</p>}
+              <div className="flex items-center gap-2.5">
+                <Avatar name={hire.name} size="sm" />
+                <div className="min-w-0">
+                  <p className="font-medium break-words">{hire.name}</p>
+                  {task && <p className="text-[13px] break-words text-muted">{task.template.title}</p>}
+                </div>
+              </div>
               <p className="mt-1 text-[15px] break-words">{request.message}</p>
               <p className="text-[13px] text-muted">{formatShort(request.on)}</p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -543,7 +797,7 @@ function HelpRequests({
                   type="button"
                   aria-label={`Mark resolved, request from ${hire.name}`}
                   onClick={() => {
-                    const result = store.apply((current) => resolveHelp(current, persona, request.id))
+                    const result = store.apply((current) => resolveHelp(current, persona, request.id, today))
                     if (result.ok) toast('Marked resolved')
                     else toast.error(result.reason)
                   }}
@@ -593,7 +847,7 @@ function WhyFlagged({
   taskRoute: (taskId: string) => Route
 }) {
   return (
-    <section className="rounded-panel border border-hairline bg-surface px-5 py-4">
+    <section className="glass rounded-card px-5 py-4">
       <h2 className="text-lg font-semibold">Why flagged</h2>
       <p className="mt-1 text-[15px]">{healthReason(health, hire)}</p>
       <ul className="mt-2 divide-y divide-hairline border-t border-hairline">
@@ -643,7 +897,7 @@ function NudgePanel({
   if (!target && !nudged && others.length === 0) return null
 
   return (
-    <section className="rounded-panel border border-hairline bg-surface px-5 py-4">
+    <section className="glass rounded-card px-5 py-4">
       <h2 className="text-lg font-semibold">What you can do</h2>
       {target && (
         <>
@@ -711,10 +965,12 @@ export function HireDetail({
   const manager = leaderById(hire.managerId)
   const flagged = health.kind === 'needs-attention' || health.kind === 'watch'
   const parent: Route = { screen: 'hire', leaderId: leader.id, hireId: hire.id, taskId: null }
-  const back: BackLink = {
-    label: leader.kind === 'hr' ? 'Back to all new hires' : 'Back to your team',
-    route: { screen: 'team', leaderId: leader.id },
-  }
+  const back: BackLink =
+    leader.kind !== 'hr'
+      ? { label: 'Back to your team', route: { screen: 'team', leaderId: leader.id } }
+      : currentHrArea() === 'overview'
+        ? { label: 'Back to Overview', route: { screen: 'team', leaderId: leader.id } }
+        : { label: 'Back to People', route: { screen: 'people', leaderId: leader.id } }
 
   return (
     <Shell
