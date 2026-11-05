@@ -4,6 +4,8 @@ BrightPath Welcome is a working onboarding prototype for BrightPath Technologies
 
 New hires see what to focus on next. Managers and HR see who is on track and who needs help.
 
+![A new hire's home screen on day one](docs/screenshots/new-hire-home.png)
+
 ## Who it serves
 
 - **New hires** want to know what to do first, without facing a long checklist on day one.
@@ -62,7 +64,33 @@ David wants department-specific requirements. Emily does not want to see 40 task
 - Links to the task being discussed, from nudges, help requests, reasons for a flag, and blocked tasks.
 - Changes persist through a refresh and sync live between tabs.
 - Every screen has its own link, and bad links show a clear message.
+- Detail screens have a pinned Back button. New pages open at the top, and going back returns to your place in the list.
 - Sample dates are relative to the day the data was created, so the demo does not go stale.
+
+## Screenshots
+
+**The first visit opens a short tour.** Each person gets their own.
+
+![First-visit tour](docs/screenshots/first-visit-tour.png)
+
+**A blocked task names who owns the blocker, and asking for help takes one click.**
+
+![Asking for help](docs/screenshots/ask-for-help.png)
+
+**The team page says who needs attention, why, and what to do next.**
+
+![HR team page](docs/screenshots/hr-team.png)
+
+**Detail screens have a pinned way back, and the reason for a flag links to the task.**
+
+![Hire detail](docs/screenshots/hire-detail.png)
+
+**Phone layouts are designed separately, not squeezed from desktop.**
+
+<p>
+  <img src="docs/screenshots/new-hire-phone.png" alt="New hire home on a phone" width="280">
+  <img src="docs/screenshots/hire-detail-phone.png" alt="Hire detail on a phone" width="280">
+</p>
 
 ## What is real and what is simulated
 
@@ -112,7 +140,7 @@ The full exclusions table is in [docs/plan.md](docs/plan.md).
 
 ```bash
 npm test             # 174 unit tests
-npm run test:e2e     # 125 browser tests, using your installed Chrome
+npm run test:e2e     # 137 browser tests, using your installed Chrome
 npm run build        # type-check and production build
 ```
 
