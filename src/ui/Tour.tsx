@@ -12,77 +12,55 @@ type TourStep = {
   tryIt?: string
 }
 
-const SWITCH_VIEW: TourStep = {
-  target: 'view-as',
-  title: 'See the other views',
-  body: 'This is a demo, so you can switch to anyone here. Each person gets their own short tour the first time. You can also replay this one or reset the sample data.',
-}
-
 const NEW_HIRE_STEPS: readonly TourStep[] = [
+  {
+    target: 'start-here',
+    title: 'Start here',
+    body: 'You see three tasks at most, even when your whole plan is longer. The first one is what to do next.',
+  },
   {
     target: 'journey',
     title: 'See where you are',
     body: 'The marker shows where you are in your first month. The counts show what’s finished.',
   },
   {
-    target: 'start-here',
-    title: 'Start here',
-    body: 'You see three tasks at most, even when your whole plan is longer. The first one explains why it matters and what to do.',
-    tryIt: 'After this tour, click Mark complete, then Undo.',
+    target: 'ask',
+    title: 'Help is close',
+    body: 'Ask about your plan here, or ask a person. Replay this tour any time from Show me around.',
   },
-  {
-    target: 'waiting',
-    title: 'Waiting isn’t late',
-    body: 'When a task depends on someone else, this says who. You have nothing to chase, and one click asks the person who can help.',
-  },
+]
+
+const FINISHED_STEPS: readonly TourStep[] = [
   {
     target: 'ask',
-    title: 'Ask a question',
-    body: 'Answers come from your own plan using simple rules, not AI. If there’s no answer, it offers a person instead of guessing.',
-    tryIt: 'After this tour, click “What should I do next?”',
+    title: 'Help is still here',
+    body: 'Your onboarding is finished. You can still ask about your plan, or ask a person.',
   },
-  {
-    target: 'full-plan',
-    title: 'Everything is one click away',
-    body: 'Your full plan is here whenever you want it, grouped by phase.',
-  },
-  SWITCH_VIEW,
 ]
 
 const MANAGER_STEPS: readonly TourStep[] = [
   {
     target: 'attention',
     title: 'Who needs your help',
-    body: 'Each card says who, why, and what to do next. If someone else owns the late work, it says so.',
+    body: 'Each card says who, why, and what to do next.',
   },
   {
     target: 'next-actions',
     title: 'What’s yours to do',
-    body: 'These are the tasks only you can complete. Each one opens the real task.',
+    body: 'Only you can complete these tasks. Each one opens the real task.',
   },
   {
-    target: 'help-requests',
-    title: 'Questions from new hires',
-    body: 'New hires’ requests arrive here. Marking one resolved updates their screen.',
+    target: 'with-others',
+    title: 'What’s with someone else',
+    body: 'IT or HR own these, so you can see what’s holding up your team without chasing it. Replay this tour from Show me around.',
   },
-  {
-    target: 'roster',
-    title: 'Everyone at a glance',
-    body: 'People who need help come first. Use these filters to narrow the list, and open anyone’s plan from it.',
-  },
-  SWITCH_VIEW,
 ]
 
 const HR_STEPS: readonly TourStep[] = [
   {
     target: 'attention',
     title: 'Who needs your help',
-    body: 'You see new hires across every team. Each card says who, why, and what to do next.',
-  },
-  {
-    target: 'next-actions',
-    title: 'What’s yours to do',
-    body: 'HR tasks and IT tasks stay separate. You stand in for IT in this prototype, and a task shows who it’s blocking.',
+    body: 'New hires across every team. Each card says who, why, and what to do next.',
   },
   {
     target: 'help-requests',
@@ -90,11 +68,10 @@ const HR_STEPS: readonly TourStep[] = [
     body: 'IT and HR questions come to you. Marking one resolved updates the new hire’s screen.',
   },
   {
-    target: 'new-plan',
-    title: 'Start a plan',
-    body: 'Choose a department, and the plan comes from company and department tasks.',
+    target: 'insights-nav',
+    title: 'Fix the cause',
+    body: 'Insights shows where people repeatedly get stuck, so you can improve the plan for future hires. Replay this tour from Show me around.',
   },
-  SWITCH_VIEW,
 ]
 
 /** The tour belongs to the person being viewed, and runs on their main screen. */
@@ -103,7 +80,13 @@ function tourFor(hash: string): { steps: readonly TourStep[]; main: Route } {
   if (route.screen === 'home' || route.screen === 'plan') {
     return { steps: NEW_HIRE_STEPS, main: { screen: 'home', hireId: route.hireId, taskId: null } }
   }
-  if (route.screen === 'team' || route.screen === 'hire' || route.screen === 'new') {
+  if (
+    route.screen === 'team' ||
+    route.screen === 'people' ||
+    route.screen === 'insights' ||
+    route.screen === 'hire' ||
+    route.screen === 'new'
+  ) {
     const leader = leaderById(route.leaderId)
     if (leader) {
       return {
@@ -122,10 +105,11 @@ const CARD_HEIGHT = 310
 const GAP = 14
 const PAD = 6
 
-const findTarget = (name: string): HTMLElement | null => {
-  const element = document.querySelector<HTMLElement>(`[data-tour="${name}"]`)
-  return element && element.getClientRects().length > 0 ? element : null
-}
+// Navigation exists twice, for wide screens and phones, so this finds the one on screen.
+const findTarget = (name: string): HTMLElement | null =>
+  [...document.querySelectorAll<HTMLElement>(`[data-tour="${name}"]`)].find(
+    (element) => element.getClientRects().length > 0,
+  ) ?? null
 
 const measure = (element: HTMLElement): Box => {
   const rect = element.getBoundingClientRect()
@@ -176,9 +160,15 @@ function TourPanel() {
     const started = Date.now()
     const check = () => {
       if (cancelled) return
-      const ready = plan.steps.some((item) => item.target !== SWITCH_VIEW.target && findTarget(item.target))
+      const ready = plan.steps.some((item) => findTarget(item.target))
       if (ready || Date.now() - started > 800) {
-        setSteps(plan.steps.filter((item) => findTarget(item.target)))
+        const found = plan.steps.filter((item) => findTarget(item.target))
+        // Someone who has finished has no next step, so only the help step still applies.
+        setSteps(
+          plan.steps === NEW_HIRE_STEPS && !findTarget('start-here') && !findTarget('nothing-today')
+            ? FINISHED_STEPS.filter((item) => findTarget(item.target))
+            : found,
+        )
       } else {
         window.setTimeout(check, 40)
       }
@@ -245,8 +235,8 @@ function TourPanel() {
 
   return (
     <div onKeyDown={onKeyDown}>
-      {/* Blocks clicks on the page, so the tour cannot change any data. */}
-      <div aria-hidden className="fixed inset-0 z-[80]" />
+      {/* A click outside closes the tour without reaching the page, so it never gets in the way. */}
+      <div aria-hidden onClick={close} className="fixed inset-0 z-[80]" />
       {box ? (
         <div
           aria-hidden

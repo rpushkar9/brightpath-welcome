@@ -7,6 +7,8 @@ export type Route =
   | { screen: 'team'; leaderId: string }
   | { screen: 'hire'; leaderId: string; hireId: string; taskId: string | null }
   | { screen: 'new'; leaderId: string }
+  | { screen: 'people'; leaderId: string }
+  | { screen: 'insights'; leaderId: string; taskId: string | null }
   | { screen: 'not-found' }
 
 const NOT_FOUND: Route = { screen: 'not-found' }
@@ -46,6 +48,11 @@ export function parseRoute(hash: string): Route {
   if (area === 'team') {
     if (section === undefined) return { screen: 'team', leaderId: id }
     if (section === 'new') return parts.length === 3 ? { screen: 'new', leaderId: id } : NOT_FOUND
+    if (section === 'people') return parts.length === 3 ? { screen: 'people', leaderId: id } : NOT_FOUND
+    if (section === 'insights') {
+      if (parts.length === 3) return { screen: 'insights', leaderId: id, taskId: null }
+      return parts.length === 4 && sub ? { screen: 'insights', leaderId: id, taskId: sub } : NOT_FOUND
+    }
     if (section === 'hire' && sub) {
       if (subId === undefined) return { screen: 'hire', leaderId: id, hireId: sub, taskId: null }
       return subId === 'task' ? NOT_FOUND : NOT_FOUND
@@ -88,6 +95,12 @@ export function hrefFor(route: Route): string {
         : join('team', route.leaderId, 'hire', route.hireId)
     case 'new':
       return join('team', route.leaderId, 'new')
+    case 'people':
+      return join('team', route.leaderId, 'people')
+    case 'insights':
+      return route.taskId
+        ? join('team', route.leaderId, 'insights', route.taskId)
+        : join('team', route.leaderId, 'insights')
     case 'not-found':
       return '#/not-found'
     default: {
@@ -104,6 +117,14 @@ export const pageKeyOf = (route: Route): string =>
       ? { ...route, taskId: null }
       : route,
   )
+
+let hrArea: 'overview' | 'people' = 'people'
+
+/** Remembers where HR opened a person from, so the Back button can return there. */
+export const rememberHrArea = (area: 'overview' | 'people'): void => {
+  hrArea = area
+}
+export const currentHrArea = (): 'overview' | 'people' => hrArea
 
 let returning = false
 

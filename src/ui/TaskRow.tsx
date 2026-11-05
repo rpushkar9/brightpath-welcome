@@ -95,7 +95,7 @@ export function TaskRow({
   const showOwner = !isOwner(persona, hire, owner)
 
   return (
-    <li className="relative flex items-start gap-3 px-4 py-3 transition-colors duration-100 hover:bg-canvas sm:px-5">
+    <li className="relative flex items-start gap-3 px-4 py-3 transition-colors duration-100 hover:bg-white/60 sm:px-5">
       <span className="flex h-6 items-center">
         <TaskControl task={task} hire={hire} persona={persona} />
       </span>

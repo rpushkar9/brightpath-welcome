@@ -34,7 +34,7 @@ export function PlanPhases({
   const [manual, setManual] = useState<Partial<Record<PhaseId, boolean>>>({})
 
   return (
-    <div className="overflow-hidden rounded-panel border border-hairline bg-surface">
+    <div className="glass overflow-hidden rounded-card">
       {grouped.map((phase) => {
         const open = manual[phase.id] ?? defaultOpen(phase.id, stage, phase.tasks)
         const done = phase.tasks.filter((task) => task.status.kind === 'completed').length
@@ -48,7 +48,7 @@ export function PlanPhases({
                 aria-expanded={open}
                 aria-controls={panelId}
                 onClick={() => setManual((current) => ({ ...current, [phase.id]: !open }))}
-                className="flex min-h-13 w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors duration-100 hover:bg-canvas focus-visible:outline-offset-[-2px] sm:px-5"
+                className="flex min-h-13 w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors duration-100 hover:bg-white/60 focus-visible:outline-offset-[-2px] sm:px-5"
               >
                 <ChevronDown
                   size={18}

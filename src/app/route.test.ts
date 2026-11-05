@@ -11,6 +11,9 @@ describe('routes', () => {
     { screen: 'hire', leaderId: 'david', hireId: 'priya-nair', taskId: null },
     { screen: 'hire', leaderId: 'david', hireId: 'priya-nair', taskId: 'e-first-pr' },
     { screen: 'new', leaderId: 'sarah' },
+    { screen: 'people', leaderId: 'sarah' },
+    { screen: 'insights', leaderId: 'sarah', taskId: null },
+    { screen: 'insights', leaderId: 'sarah', taskId: 's-crm' },
   ]
 
   it.each(routes)('round-trips %o', (route) => {
@@ -33,6 +36,8 @@ describe('routes', () => {
     '#/team/david/hire/x/task',
     '#/team/david/hire/x/other/y',
     '#/team/david/new/extra',
+    '#/team/david/people/extra',
+    '#/team/david/insights/a/b',
     '#/me/%E0%A4%A',
     '#/me//task/x',
     '#/a/b/c/d/e/f/g',

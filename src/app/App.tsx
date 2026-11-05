@@ -11,7 +11,8 @@ import { MessageScreen } from '../ui/Shell'
 import { Tour } from '../ui/Tour'
 import { claimFirstVisit, startTour } from '../ui/tourState'
 import { EmployeeHome, EmployeePlan } from '../ui/employee/EmployeeScreens'
-import { HireDetail, NewHireForm, TeamView } from '../ui/team/TeamScreens'
+import { InsightsView } from '../ui/team/Insights'
+import { HireDetail, NewHireForm, PeopleView, TeamView } from '../ui/team/TeamScreens'
 import { hrefFor, pageKeyOf, takeOverlayTrigger, takeReturning, useRoute, type Route } from './route'
 
 const DEFAULT_ROUTE: Route = { screen: 'home', hireId: DEFAULT_HIRE_ID, taskId: null }
@@ -33,7 +34,15 @@ function useToday() {
 
 const viewerOf = (route: Route): string | null => {
   if (route.screen === 'home' || route.screen === 'plan') return route.hireId
-  if (route.screen === 'team' || route.screen === 'hire' || route.screen === 'new') return route.leaderId
+  if (
+    route.screen === 'team' ||
+    route.screen === 'people' ||
+    route.screen === 'insights' ||
+    route.screen === 'hire' ||
+    route.screen === 'new'
+  ) {
+    return route.leaderId
+  }
   return null
 }
 
@@ -111,6 +120,8 @@ function Screen() {
       return <Component hire={hire} persona={persona} taskId={route.taskId} today={today} />
     }
     case 'team':
+    case 'people':
+    case 'insights':
     case 'new':
     case 'hire': {
       const leader = leaderById(route.leaderId)
@@ -128,6 +139,21 @@ function Screen() {
       const home: Route = { screen: 'team', leaderId: leader.id }
 
       if (route.screen === 'team') return <TeamView leader={leader} today={today} />
+      if (route.screen === 'people') return <PeopleView leader={leader} today={today} />
+
+      if (route.screen === 'insights') {
+        if (leader.kind !== 'hr') {
+          return (
+            <MessageScreen
+              persona={persona}
+              title="Insights are for HR"
+              body="Managers can see their own new hires. HR sees patterns across every team."
+              action={home}
+            />
+          )
+        }
+        return <InsightsView leader={leader} taskId={route.taskId} today={today} />
+      }
 
       if (route.screen === 'new') {
         if (leader.kind !== 'hr') {
@@ -183,6 +209,7 @@ export function App() {
       <Tour />
       <Toaster
         position="bottom-center"
+        mobileOffset={{ bottom: 80 }}
         toastOptions={{
           style: {
             fontFamily: 'var(--font-sans)',
