@@ -8,8 +8,8 @@ const back = (page: import('@playwright/test').Page, name: string | RegExp) =>
 test.describe('getting back', () => {
   for (const [label, hash, name, url] of [
     ['a manager’s hire page', '#/team/david/hire/priya-nair', 'Back to your team', /team\/david$/],
-    ['HR’s hire page', '#/team/sarah/hire/marcus-webb', 'Back to all new hires', /team\/sarah$/],
-    ['the new plan form', '#/team/sarah/new', 'Back to all new hires', /team\/sarah$/],
+    ['HR’s hire page', '#/team/sarah/hire/marcus-webb', 'Back to People', /team\/sarah\/people$/],
+    ['the new plan form', '#/team/sarah/new', 'Back to People', /team\/sarah\/people$/],
     ['the full plan', '#/me/emily-carter/plan', 'Back to my next steps', /me\/emily-carter$/],
   ] as const) {
     test(`${label} has a clear way back`, async ({ page }) => {
@@ -18,6 +18,33 @@ test.describe('getting back', () => {
       await expect(page).toHaveURL(url)
     })
   }
+
+  test('HR returns to the area they came from', async ({ page }) => {
+    await openApp(page, '#/team/sarah')
+    await page.locator('li').filter({ has: page.getByRole('heading', { name: 'Marcus Webb' }) }).getByRole('link', { name: 'Open plan' }).click()
+    await back(page, 'Back to Overview').click()
+    await expect(page).toHaveURL(/team\/sarah$/)
+  })
+
+  test('main navigation shows where you are, and HR has three areas', async ({ page }) => {
+    await openApp(page, '#/team/sarah')
+    const nav = page.getByRole('navigation', { name: 'Main' })
+    await expect(nav.getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page')
+    await nav.getByRole('link', { name: 'Insights' }).click()
+    await expect(page).toHaveURL(/team\/sarah\/insights$/)
+    await expect(nav.getByRole('link', { name: 'Insights' })).toHaveAttribute('aria-current', 'page')
+    await nav.getByRole('link', { name: 'People' }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('People')
+  })
+
+  test('managers and new hires do not see HR areas', async ({ page }) => {
+    await openApp(page, '#/team/david')
+    const nav = page.getByRole('navigation', { name: 'Main' })
+    await expect(nav.getByRole('link', { name: 'Insights' })).toHaveCount(0)
+    await page.goto('/#/me/emily-carter')
+    await expect(nav.getByRole('link', { name: 'Insights' })).toHaveCount(0)
+    await expect(nav.getByRole('link', { name: 'Full plan' })).toBeVisible()
+  })
 
   test('main screens show no back button', async ({ page }) => {
     await openApp(page, '#/team/david')
@@ -61,7 +88,7 @@ test.describe('getting back', () => {
 
   test('opening someone starts at the top of their page, and going back returns to your place', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 500 })
-    await openApp(page, '#/team/sarah')
+    await openApp(page, '#/team/sarah/people')
     const link = page.locator('table').getByRole('link', { name: 'Jordan Lee' })
     await link.scrollIntoViewIfNeeded()
     const y = await page.evaluate(() => window.scrollY)
@@ -69,8 +96,8 @@ test.describe('getting back', () => {
     await link.click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Jordan Lee')
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
-    await back(page, 'Back to all new hires').click()
-    await expect(page.getByRole('heading', { name: 'All new hires' })).toBeVisible()
+    await back(page, 'Back to People').click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('People')
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(y)
   })
 
@@ -108,6 +135,21 @@ test.describe('getting back', () => {
   test.describe('on a phone', () => {
     test.use({ viewport: { width: 360, height: 740 } })
 
+    test('a tab bar reaches every HR area, and requests come before task lists', async ({ page }) => {
+      await openApp(page, '#/team/sarah')
+      const nav = page.getByRole('navigation', { name: 'Main' })
+      await expect(nav).toBeInViewport({ ratio: 1 })
+      const requests = await page.getByRole('heading', { name: /Help requests/ }).boundingBox()
+      const actions = await page.getByRole('heading', { name: /Your next actions/ }).boundingBox()
+      expect(requests && actions && requests.y < actions.y).toBe(true)
+      await page.getByRole('button', { name: /Show all 5/ }).click()
+      await expect(page.getByRole('heading', { name: 'HR tasks' })).toBeVisible()
+      await nav.getByRole('link', { name: 'People' }).click()
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText('People')
+      await expect(page.getByRole('link', { name: 'Marcus Webb' })).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)
+    })
+
     test('the button fits, with a long name', async ({ page }) => {
       await openApp(page, '#/team/sarah/new')
       await page.getByLabel('Full name').fill('Wolfeschlegelsteinhausenbergerdorff Mackenzie-Abernathy')
@@ -115,7 +157,7 @@ test.describe('getting back', () => {
       await page.getByRole('radio', { name: 'Sales' }).check()
       await page.getByLabel('Start date').fill('2026-11-16')
       await page.getByRole('button', { name: 'Start plan' }).click()
-      await expect(back(page, 'Back to all new hires')).toBeInViewport({ ratio: 1 })
+      await expect(back(page, 'Back to People')).toBeInViewport({ ratio: 1 })
       expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)
     })
   })

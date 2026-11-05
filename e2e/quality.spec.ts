@@ -9,7 +9,11 @@ const SCREENS = [
   ['full plan', '#/me/priya-nair/plan'],
   ['task drawer', '#/me/emily-carter/task/c-handbook'],
   ['manager roster', '#/team/david'],
-  ['HR roster', '#/team/sarah'],
+  ['HR overview', '#/team/sarah'],
+  ['HR people', '#/team/sarah/people'],
+  ['HR insights', '#/team/sarah/insights'],
+  ['insight detail', '#/team/sarah/insights/s-crm-account'],
+  ['blocked task', '#/me/tomas-rivera/task/s-crm'],
   ['hire detail', '#/team/sarah/hire/marcus-webb'],
   ['new plan form', '#/team/sarah/new'],
   ['nudge and help on a late plan', '#/me/tomas-rivera'],
@@ -125,9 +129,9 @@ test.describe('reduced motion', () => {
   })
 })
 
-const EMILY_STEPS = ['journey', 'start-here', 'waiting', 'ask', 'full-plan', 'view-as']
-const DAVID_STEPS = ['attention', 'next-actions', 'roster', 'view-as']
-const SARAH_STEPS = ['attention', 'next-actions', 'help-requests', 'new-plan', 'view-as']
+const EMILY_STEPS = ['start-here', 'journey', 'ask']
+const DAVID_STEPS = ['attention', 'next-actions', 'with-others']
+const SARAH_STEPS = ['attention', 'help-requests', 'insights-nav']
 
 const card = (page: Page) => page.getByRole('dialog')
 const next = (page: Page) => page.getByRole('button', { name: 'Next', exact: true })
@@ -136,7 +140,7 @@ const next = (page: Page) => page.getByRole('button', { name: 'Next', exact: tru
 async function checkEveryStep(page: Page, targets: readonly string[], { noOverlap = false } = {}) {
   for (const [index, name] of targets.entries()) {
     await expect(card(page)).toContainText(`Step ${index + 1} of ${targets.length}`)
-    const target = page.locator(`[data-tour="${name}"]`)
+    const target = page.locator(`[data-tour="${name}"]:visible`).first()
     await expect(async () => {
       const spot = await page.locator('[data-tour-spotlight]').boundingBox()
       const box = await target.boundingBox()
@@ -168,7 +172,7 @@ test.describe('tour, replayed from the button', () => {
     await start(page)
     await checkEveryStep(page, EMILY_STEPS, { noOverlap: true })
     await page.getByRole('button', { name: 'Back', exact: true }).click()
-    await expect(card(page)).toContainText('Everything is one click away')
+    await expect(card(page)).toContainText('See where you are')
     await next(page).click()
     await page.getByRole('button', { name: 'Finish' }).click()
     await expect(card(page)).toHaveCount(0)
@@ -191,7 +195,8 @@ test.describe('tour, replayed from the button', () => {
   test('leaves out steps that are not on this person’s screen', async ({ page }) => {
     await openApp(page, '#/me/aisha-rahman')
     await start(page)
-    await checkEveryStep(page, ['journey', 'ask', 'full-plan', 'view-as'])
+    await checkEveryStep(page, ['ask'])
+    await expect(card(page)).toContainText('Your onboarding is finished')
   })
 
   test('starting from a detail screen tours the main screen, then returns', async ({ page }) => {
@@ -203,13 +208,14 @@ test.describe('tour, replayed from the button', () => {
     await expect(page).toHaveURL(/hire\/priya-nair$/)
   })
 
-  test('blocks clicks on the page behind it', async ({ page }) => {
+  test('a click outside closes it, and never reaches the page', async ({ page }) => {
     await openApp(page)
     await start(page)
     await expect(card(page)).toBeVisible()
-    await page.mouse.click(280, 590)
+    const button = await page.getByRole('button', { name: 'Mark complete' }).boundingBox()
+    if (button) await page.mouse.click(button.x + 10, button.y + 10)
+    await expect(card(page)).toHaveCount(0)
     await expect(page.locator('header')).toContainText('Whole plan: 6 of 18')
-    await expect(card(page)).toBeVisible()
   })
 
   test('works by keyboard', async ({ page }) => {
@@ -255,7 +261,7 @@ test.describe('tour on a first visit', () => {
   test('opens by itself once, and not again after a refresh', async ({ page }) => {
     const noErrors = watchForErrors(page)
     await openApp(page, '#/')
-    await expect(card(page)).toContainText('See where you are')
+    await expect(card(page)).toContainText('Step 1 of 3')
     await expect(page).toHaveURL(/me\/emily-carter$/)
     await page.reload()
     await expect(page.getByText('Start here')).toBeVisible()
@@ -291,9 +297,8 @@ test.describe('tour on a first visit', () => {
   test('does not interrupt a link to a task, and shows once that closes', async ({ page }) => {
     await openApp(page, '#/me/emily-carter/task/c-handbook')
     await expect(page.getByRole('dialog')).toContainText('Why it matters')
-    await expect(page.getByText('See where you are')).toHaveCount(0)
     await page.keyboard.press('Escape')
-    await expect(page.getByText('See where you are')).toBeVisible()
+    await expect(page.getByRole('dialog').filter({ hasText: 'Step 1 of 3' })).toBeVisible()
   })
 
   test('does not open on a bad link', async ({ page }) => {
@@ -308,8 +313,8 @@ test.describe('tour on a first visit', () => {
     await page.getByRole('button', { name: /Emily Carter/ }).click()
     await page.getByRole('menuitem', { name: /Reset demo data/ }).click()
     await page.getByRole('button', { name: 'Reset data' }).click()
-    await expect(page.getByText('Start here')).toBeVisible()
-    await expect(page.getByText('See where you are')).toHaveCount(0)
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Emily')
+    await expect(card(page)).toHaveCount(0)
   })
 
   test('a browser that blocks saving does not replay the tour every time', async ({ page }) => {

@@ -22,10 +22,54 @@ test.describe('manager view', () => {
     await expect(page.locator('table')).not.toContainText('Priya')
   })
 
-  test('Sarah sees everyone', async ({ page }) => {
+  test('Sarah’s overview shows urgent work, and People shows everyone', async ({ page }) => {
     await openApp(page, '#/team/sarah')
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Two people need your help.')
+    await expect(page.locator('header')).toContainText('2 Needs attention')
+    await expect(page.locator('table')).toHaveCount(0)
+    await page.getByRole('link', { name: 'See all 6 new hires' }).click()
     await expect(page.locator('table tbody tr')).toHaveCount(6)
+  })
+
+  test('People can be filtered by department and sorted', async ({ page }) => {
+    await openApp(page, '#/team/sarah/people')
+    await page.getByLabel('Department').selectOption('sales')
+    await expect(page.locator('table tbody tr')).toHaveCount(3)
+    await expect(page.getByRole('button', { name: /^All/ })).toContainText('(3)')
+    await page.getByLabel('Sort by').selectOption('name')
+    await expect(page.locator('table tbody tr').first()).toContainText('Aisha Rahman')
+    await page.getByRole('button', { name: /^Watch/ }).click()
+    await expect(page.locator('table tbody tr')).toHaveCount(1)
+    await page.getByLabel('Department').selectOption('engineering')
+    await expect(page.getByText('Nobody is marked “Watch” right now.')).toBeVisible()
+    await page.getByRole('button', { name: 'Show everyone' }).click()
+    await expect(page.locator('table tbody tr')).toHaveCount(6)
+  })
+
+  test('a manager can see what IT or HR is holding up, without being offered it', async ({ page }) => {
+    await openApp(page, '#/team/david')
+    const others = page.getByRole('heading', { name: 'With IT or HR' }).locator('..')
+    await expect(others).toContainText('Grant repository access')
+    await expect(others).toContainText('Blocks Emily: Run the local setup')
+    await others.getByRole('link', { name: 'Grant repository access' }).click()
+    await expect(page.getByRole('dialog')).toContainText('IT owns this task')
+    await expect(page.getByRole('dialog').getByRole('button', { name: 'Mark complete' })).toHaveCount(0)
+  })
+
+  test('what changed shows real activity from another window, then clears on the next visit', async ({ context }) => {
+    const david = await context.newPage()
+    const emily = await context.newPage()
+    await openApp(david, '#/team/david')
+    const changed = david.getByRole('heading', { name: 'What changed since your last visit' }).locator('..')
+    await expect(changed).toContainText('Nothing new')
+    await openApp(emily)
+    await emily.getByRole('button', { name: 'Mark complete' }).click()
+    await expect(changed).toContainText('Emily completed “Set up your laptop and sign in”')
+    await david.reload()
+    await expect(changed).toContainText('Nothing new')
+    await emily.getByRole('button', { name: 'Undo', exact: true }).click()
+    await expect(emily.locator('header')).toContainText('Whole plan: 6 of 18')
+    await expect(changed).toContainText('Emily')
   })
 
   test('the filter narrows the roster and explains an empty result', async ({ page }) => {
