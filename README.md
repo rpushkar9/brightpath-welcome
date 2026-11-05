@@ -64,7 +64,7 @@ David wants department-specific requirements. Emily does not want to see 40 task
 - Links to the task being discussed, from nudges, help requests, reasons for a flag, and blocked tasks.
 - Changes persist through a refresh and sync live between tabs.
 - Every screen has its own link, and bad links show a clear message.
-- Detail screens have a pinned Back button. New pages open at the top, and going back returns to your place in the list.
+- Detail screens have a clear Back button on the left above the title, and long pages have another at the end. New pages open at the top, and going back returns to your place in the list.
 - Sample dates are relative to the day the data was created, so the demo does not go stale.
 
 ## Screenshots
@@ -81,7 +81,7 @@ David wants department-specific requirements. Emily does not want to see 40 task
 
 ![HR team page](docs/screenshots/hr-team.png)
 
-**Detail screens have a pinned way back, and the reason for a flag links to the task.**
+**Detail screens have a clear way back on the left, and the reason for a flag links to the task.**
 
 ![Hire detail](docs/screenshots/hire-detail.png)
 
@@ -140,7 +140,7 @@ The full exclusions table is in [docs/plan.md](docs/plan.md).
 
 ```bash
 npm test             # 174 unit tests
-npm run test:e2e     # 137 browser tests, using your installed Chrome
+npm run test:e2e     # 138 browser tests, using your installed Chrome
 npm run build        # type-check and production build
 ```
 

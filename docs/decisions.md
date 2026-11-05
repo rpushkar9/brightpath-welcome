@@ -49,7 +49,7 @@ See section 4 of [plan.md](plan.md).
 | D16 | Time estimates count unknown tasks instead of guessing, and round to 15 minutes | One confident total | Six tasks have no sensible estimate, and a falsely precise number would mislead |
 | D17 | A hand-built tour for each person, opening once on their first visit, with a button to replay it | A tour library, or one tour across all roles | No new dependency, and it cannot change data. A new hire should not be walked through HR's screen. It waits if someone arrives through a link to a task, and resetting demo data does not bring it back |
 | D18 | Anything that mentions a task links to it | Text only | People should not have to hunt for what a nudge or flag refers to |
-| D19 | A pinned white bar holds the way back on detail screens, and the logo goes to your own home | A back link inside the dark header | The link blended in and scrolled away. The logo used to jump to Emily, which switched who you were viewing as |
+| D19 | A solid white Back button at the left above the title, with a second at the end of long pages. The logo goes to your own home | A pale text link, or a bar pinned to the top of the screen | The pale link blended in. A pinned bar did not feel intuitive in user testing. The logo used to jump to Emily, which switched who you were viewing as |
 | D10 | Radix primitives styled directly | The full shadcn setup | shadcn wraps these same primitives, and we only need a drawer and a menu |
 
 ## Approved decisions
