@@ -2,7 +2,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { ChevronRight, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { closeOverlay, hrefFor, withTask, type Route } from '../app/route'
-import { formatLong } from '../domain/dates'
+import { formatLong, formatShort } from '../domain/dates'
 import { RESOURCE_EXCERPTS } from '../domain/resources'
 import { canAct, isOwner, ownerName } from '../domain/rules'
 import type { Hire, Persona, PlanTask } from '../domain/types'
@@ -26,17 +26,26 @@ function NotAvailableNote({
   hire,
   persona,
   parent,
+  plan,
 }: {
   task: PlanTask
   hire: Hire
   persona: Persona
   parent: Route
+  plan: PlanTask[]
 }) {
   const { status } = task
   if (status.kind === 'waiting') {
     const route = task.template.requires ? withTask(parent, task.template.requires) : null
+    const prerequisite = plan.find((item) => item.template.id === task.template.requires)
     return (
       <p className="text-sm text-waiting">
+        {prerequisite?.status.kind === 'overdue' && (
+          <span className="mb-1 block font-medium">
+            {ownerName(status.onOwner, hire)} is late on this, not you. It was due{' '}
+            {formatShort(prerequisite.status.dueOn)}.
+          </span>
+        )}
         Waiting on {ownerName(status.onOwner, hire)} to finish{' '}
         {route ? (
           <a
@@ -57,7 +66,12 @@ function NotAvailableNote({
     return <p className="text-sm text-muted">This task opens on {formatLong(status.opensOn)}.</p>
   }
   if (status.kind === 'completed') {
-    return <p className="text-sm text-muted">Marked complete by {status.byName}.</p>
+    return (
+      <p className="text-sm text-muted">
+        Marked complete by {status.byName}
+        {task.template.reference ? '. This records confirmation, not a submission or a check by HR.' : '.'}
+      </p>
+    )
   }
   if (!canAct(persona, hire, task.template.owner)) {
     return (
@@ -98,16 +112,25 @@ function Resource({ name }: { name: string }) {
   )
 }
 
+/** A blocked task must not read as something the person can start now. */
+function blockedHeading(task: PlanTask): string {
+  const { status } = task
+  const onAccess = status.kind === 'waiting' && /access|account|laptop/i.test(status.onTitle)
+  return onAccess ? 'Once access is ready' : 'Once that’s done'
+}
+
 function DrawerContent({
   task,
   hire,
   persona,
   parent,
+  plan,
 }: {
   task: PlanTask
   hire: Hire
   persona: Persona
   parent: Route
+  plan: PlanTask[]
 }) {
   const allowed = canAct(persona, hire, task.template.owner)
   const { status, template } = task
@@ -131,7 +154,7 @@ function DrawerContent({
           {template.summary}
         </Dialog.Description>
 
-        <dl className="mt-5 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-sm">
+        <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 rounded-[12px] bg-canvas p-3.5 text-sm">
           <dt className="text-muted">Owner</dt>
           <dd>{ownerText(task, hire, persona)}</dd>
           <dt className="text-muted">Due</dt>
@@ -149,7 +172,9 @@ function DrawerContent({
         <h3 className="mt-7 font-display text-base font-semibold">Why it matters</h3>
         <p className="mt-1.5 text-[15px] leading-relaxed">{template.why}</p>
 
-        <h3 className="mt-6 font-display text-base font-semibold">What to do</h3>
+        <h3 className="mt-6 font-display text-base font-semibold">
+          {status.kind === 'waiting' ? blockedHeading(task) : status.kind === 'upcoming' ? 'When it opens' : 'What to do'}
+        </h3>
         <ol className="mt-1.5 list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed marker:text-muted">
           {template.steps.map((step) => (
             <li key={step}>{step}</li>
@@ -160,7 +185,7 @@ function DrawerContent({
       </div>
 
       <div className="border-t border-hairline px-6 py-4">
-        <NotAvailableNote task={task} hire={hire} persona={persona} parent={parent} />
+        <NotAvailableNote task={task} hire={hire} persona={persona} parent={parent} plan={plan} />
         {canComplete && (
           <p className="mb-3 text-[13px] leading-snug text-muted">{CONFIRMATION_NOTE}</p>
         )}
@@ -246,7 +271,7 @@ export function TaskDrawer({
           }}
         >
           {task ? (
-            <DrawerContent task={task} hire={hire} persona={persona} parent={parent} />
+            <DrawerContent task={task} hire={hire} persona={persona} parent={parent} plan={plan} />
           ) : (
             <div className="flex-1 px-6 pt-5">
               <Dialog.Title className="pr-24 font-display text-2xl font-semibold">

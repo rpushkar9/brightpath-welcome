@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { hrefFor, type Route } from '../../app/route'
 import { formatShort, todayIso } from '../../domain/dates'
-import { SUGGESTED_QUESTIONS, answerQuestion } from '../../domain/help'
-import { firstName, leaderById } from '../../domain/people'
+import { answerQuestion, suggestedQuestions } from '../../domain/help'
+import { SARAH, firstName, leaderById } from '../../domain/people'
+import { buildPlan } from '../../domain/plan'
 import type { Hire, Persona } from '../../domain/types'
 import { useStore } from '../../store/store'
 import { HelpDialog } from '../HelpDialog'
@@ -18,6 +19,7 @@ export function AskPanel({ hire, persona }: { hire: Hire; persona: Persona }) {
   const [asked, setAsked] = useState('')
   const answer = asked ? answerQuestion(asked, hire, data, todayIso()) : null
   const manager = firstName(leaderById(hire.managerId)?.name ?? 'your manager')
+  const questions = suggestedQuestions(buildPlan(hire, data, todayIso()))
 
   const ask = (question: string) => {
     const text = question.trim()
@@ -25,7 +27,7 @@ export function AskPanel({ hire, persona }: { hire: Hire; persona: Persona }) {
   }
 
   return (
-    <section data-tour="ask" aria-labelledby="ask-heading" className="rounded-[12px] bg-surface p-4 shadow-card ring-1 ring-hairline">
+    <section data-tour="ask" aria-labelledby="ask-heading" className="glass rounded-card p-4">
       <h2 id="ask-heading" className="text-xl font-semibold">
         Have a question?
       </h2>
@@ -57,7 +59,7 @@ export function AskPanel({ hire, persona }: { hire: Hire; persona: Persona }) {
       </form>
 
       <div className="mt-2.5 flex flex-wrap gap-1.5">
-        {SUGGESTED_QUESTIONS.map((question) => (
+        {questions.map((question) => (
           <button
             key={question}
             type="button"
@@ -66,7 +68,7 @@ export function AskPanel({ hire, persona }: { hire: Hire; persona: Persona }) {
               setDraft('')
               ask(question)
             }}
-            className="min-h-9 cursor-pointer rounded-control bg-canvas px-2.5 text-left text-[13px] font-medium transition-colors duration-100 hover:bg-accent-tint aria-pressed:bg-accent-tint aria-pressed:text-accent-strong"
+            className="min-h-9 cursor-pointer rounded-control bg-white/70 px-2.5 ring-1 ring-hairline text-left text-[13px] font-medium transition-colors duration-100 hover:bg-accent-tint aria-pressed:bg-accent-tint aria-pressed:text-accent-strong"
           >
             {question}
           </button>
@@ -99,22 +101,40 @@ export function AskPanel({ hire, persona }: { hire: Hire; persona: Persona }) {
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-hairline pt-2">
+      <div className="mt-3 border-t border-hairline pt-2">
         <p className="text-[13px] text-muted">Answers come from your plan, not AI.</p>
-        <HelpDialog
-          hire={hire}
-          persona={persona}
-          task={null}
-          initialMessage={answer && !answer.found ? asked : ''}
-          trigger={
-            <button
-              type="button"
-              className="min-h-11 cursor-pointer rounded-control text-sm font-semibold text-accent hover:text-accent-strong"
-            >
-              Ask {manager}
-            </button>
-          }
-        />
+        <div className="mt-1 flex flex-wrap items-center gap-x-4">
+          <span className="text-[13px] text-muted">Need a person?</span>
+          <HelpDialog
+            hire={hire}
+            persona={persona}
+            task={null}
+            initialMessage={answer && !answer.found ? asked : ''}
+            trigger={
+              <button
+                type="button"
+                className="min-h-11 cursor-pointer rounded-control text-sm font-semibold text-accent hover:text-accent-strong"
+              >
+                Ask {manager}
+              </button>
+            }
+          />
+          <HelpDialog
+            hire={hire}
+            persona={persona}
+            task={null}
+            to={SARAH}
+            initialMessage={answer && !answer.found ? asked : ''}
+            trigger={
+              <button
+                type="button"
+                className="min-h-11 cursor-pointer rounded-control text-sm font-semibold text-accent hover:text-accent-strong"
+              >
+                Ask {firstName(SARAH.name)} in HR
+              </button>
+            }
+          />
+        </div>
       </div>
     </section>
   )
@@ -128,7 +148,7 @@ export function YourRequests({ hire }: { hire: Hire }) {
   return (
     <section>
       <h2 className="mb-2.5 text-xl font-semibold">Your requests</h2>
-      <ul className="divide-y divide-hairline rounded-panel border border-hairline bg-surface">
+      <ul className="glass divide-y divide-hairline rounded-card">
         {requests.map((request) => (
           <li key={request.id} className="px-4 py-3 text-sm">
             <p className="break-words">{request.message}</p>

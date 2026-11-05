@@ -4,6 +4,7 @@ import { hrefFor } from '../../app/route'
 import { businessDaysBetween, formatLong, formatShort } from '../../domain/dates'
 import { DEPARTMENT_LABEL, firstName, leaderById } from '../../domain/people'
 import { buildPlan, nextSteps, ownProgress, progress, stageOf, timeLeft, timeLeftText } from '../../domain/plan'
+import { RESOURCE_EXCERPTS } from '../../domain/resources'
 import { dismissNudge, ownerName } from '../../domain/rules'
 import type { Hire, IsoDate, Persona, PlanTask, Stage } from '../../domain/types'
 import { store, useStore } from '../../store/store'
@@ -170,7 +171,7 @@ function NextSteps({ plan, hire, persona }: { plan: PlanTask[]; hire: Hire; pers
   const planLink = (
     <a
       href={hrefFor(planRoute)}
-      className="inline-flex min-h-6 items-center font-semibold text-accent underline underline-offset-2 hover:text-accent-strong"
+      className="inline-flex min-h-6 items-center font-semibold text-accent-strong underline underline-offset-2 hover:text-ink"
     >
       See the full plan ({plan.length} tasks)
     </a>
@@ -182,7 +183,7 @@ function NextSteps({ plan, hire, persona }: { plan: PlanTask[]; hire: Hire; pers
       .sort((a, b) => a.opensOn.localeCompare(b.opensOn))[0]
     return (
       <>
-        <div className="rounded-panel border border-hairline bg-surface px-5 py-6">
+        <div data-tour="nothing-today" className="glass rounded-card px-5 py-6">
           <h3 className="text-[22px] font-semibold">Nothing needs you today</h3>
           <p className="mt-1.5 max-w-[60ch] text-[15px] leading-relaxed text-muted">
             {nextOpening
@@ -202,7 +203,7 @@ function NextSteps({ plan, hire, persona }: { plan: PlanTask[]; hire: Hire; pers
       {estimate && <p className="-mt-1 mb-2.5 text-sm text-muted">{estimate}</p>}
       <ul
         data-tour="start-here"
-        className="divide-y divide-hairline overflow-hidden rounded-[12px] bg-surface shadow-card ring-1 ring-hairline"
+        className="glass divide-y divide-hairline overflow-hidden rounded-card"
       >
         <FocusStep key={first.template.id} task={first} hire={hire} persona={persona} route={taskRoute(first.template.id)} />
         {rest.map((task) => (
@@ -237,9 +238,9 @@ function SideList({
   }[]
 }) {
   return (
-    <ul className="divide-y divide-hairline rounded-panel border border-hairline bg-surface">
+    <ul className="glass divide-y divide-hairline rounded-card">
       {items.map((item) => (
-        <li key={item.key} className="relative px-4 py-3 transition-colors duration-100 hover:bg-canvas">
+        <li key={item.key} className="relative px-4 py-3 transition-colors duration-100 hover:bg-white/60">
           <a
             href={hrefFor(item.route)}
             data-task-link={item.key}
@@ -256,6 +257,14 @@ function SideList({
   )
 }
 
+/** Says so when the task someone is waiting on is itself late. */
+function prerequisiteLate(plan: PlanTask[], task: PlanTask): string {
+  const prerequisite = plan.find((item) => item.template.id === task.template.requires)
+  return prerequisite?.status.kind === 'overdue'
+    ? ` It was due ${formatShort(prerequisite.status.dueOn)}.`
+    : ''
+}
+
 function Waiting({ plan, hire, persona }: { plan: PlanTask[]; hire: Hire; persona: Persona }) {
   const waiting = plan.filter(
     (task) => task.template.owner === 'employee' && task.status.kind === 'waiting',
@@ -270,7 +279,7 @@ function Waiting({ plan, hire, persona }: { plan: PlanTask[]; hire: Hire; person
           primary: task.template.title,
           secondary:
             task.status.kind === 'waiting'
-              ? `Waiting for ${ownerName(task.status.onOwner, hire)} to finish “${task.status.onTitle}”. Nothing for you to do yet.`
+              ? `Waiting for ${ownerName(task.status.onOwner, hire)} to finish “${task.status.onTitle}”.${prerequisiteLate(plan, task)} Nothing for you to do yet.`
               : '',
           route: { screen: 'home', hireId: hire.id, taskId: task.template.id },
           tone: 'text-muted',
@@ -353,6 +362,26 @@ function NudgeNote({ hire, plan, persona }: { hire: Hire; plan: PlanTask[]; pers
   )
 }
 
+/** The sample documents from this person's plan, to revisit after finishing. */
+function Resources({ plan, hire }: { plan: PlanTask[]; hire: Hire }) {
+  const items = plan.filter((task) => task.template.reference && RESOURCE_EXCERPTS[task.template.reference])
+  if (items.length === 0) return null
+  return (
+    <section>
+      <h2 className="mb-2.5 text-xl font-semibold">Revisit your resources</h2>
+      <SideList
+        items={items.map((task) => ({
+          key: `resource:${task.template.id}`,
+          primary: task.template.reference ?? '',
+          secondary: `Sample document, from “${task.template.title}”`,
+          route: { screen: 'home', hireId: hire.id, taskId: task.template.id },
+          tone: 'text-muted',
+        }))}
+      />
+    </section>
+  )
+}
+
 export function EmployeeHome({
   hire,
   persona,
@@ -408,20 +437,25 @@ export function EmployeeHome({
     >
       <NudgeNote hire={hire} plan={plan} persona={persona} />
       {isComplete ? (
-        <div className="max-w-2xl rounded-panel border border-hairline bg-surface px-5 py-6">
-          <CircleCheck size={28} aria-hidden className="text-done" />
-          <h2 className="mt-3 text-[22px] font-semibold">There’s nothing left on your plan</h2>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-muted">
-            You can look back through everything you completed, and undo anything marked by mistake.
-          </p>
-          <a
-            data-tour="full-plan"
-            href={hrefFor({ screen: 'plan', hireId: hire.id, taskId: null })}
-            className="mt-4 inline-flex min-h-11 items-center rounded-control border border-control px-4 font-medium transition-colors duration-100 hover:bg-canvas"
-          >
-            See the full plan
-          </a>
-          <div className="mt-6 space-y-6">
+        <div className="grid items-start gap-x-6 gap-y-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div className="min-w-0 space-y-6">
+            <div className="glass rounded-card px-5 py-6">
+              <CircleCheck size={28} aria-hidden className="text-done" />
+              <h2 className="mt-3 text-[22px] font-semibold">There’s nothing left on your plan</h2>
+              <p className="mt-1.5 max-w-[60ch] text-[15px] leading-relaxed text-muted">
+                Everything is finished. You can look back through it, and undo anything marked by mistake.
+              </p>
+              <a
+                data-tour="full-plan"
+                href={hrefFor({ screen: 'plan', hireId: hire.id, taskId: null })}
+                className="mt-4 inline-flex min-h-11 items-center rounded-control border border-control px-4 font-medium transition-colors duration-100 hover:bg-white/70"
+              >
+                Review your completed plan
+              </a>
+            </div>
+            <Resources plan={plan} hire={hire} />
+          </div>
+          <div className="min-w-0 space-y-6">
             <AskPanel hire={hire} persona={persona} />
             <YourRequests hire={hire} />
           </div>

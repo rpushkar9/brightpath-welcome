@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { todayIso } from '../domain/dates'
 import { MAX_HELP_MESSAGE, draftHelpMessage, helpRecipient, requestHelp } from '../domain/help'
 import { firstName } from '../domain/people'
-import type { Hire, Persona, PlanTask } from '../domain/types'
+import type { Hire, Leader, Persona, PlanTask } from '../domain/types'
 import { store } from '../store/store'
 
 function whyThisPerson(task: PlanTask | null, recipientName: string): string {
@@ -20,15 +20,17 @@ function HelpForm({
   persona,
   task,
   initialMessage,
+  to,
   onDone,
 }: {
   hire: Hire
   persona: Persona
   task: PlanTask | null
   initialMessage: string
+  to?: Leader
   onDone: () => void
 }) {
-  const recipient = helpRecipient(hire, task)
+  const recipient = to ?? helpRecipient(hire, task)
   const first = firstName(recipient.name)
   const [message, setMessage] = useState(initialMessage || draftHelpMessage(task))
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +41,7 @@ function HelpForm({
       onSubmit={(event) => {
         event.preventDefault()
         const result = store.apply((data) =>
-          requestHelp(data, persona, task?.template.id ?? null, message, todayIso()),
+          requestHelp(data, persona, task?.template.id ?? null, message, todayIso(), to),
         )
         if (!result.ok) {
           setError(result.reason)
@@ -103,12 +105,14 @@ export function HelpDialog({
   persona,
   task,
   initialMessage = '',
+  to,
   trigger,
 }: {
   hire: Hire
   persona: Persona
   task: PlanTask | null
   initialMessage?: string
+  to?: Leader
   trigger: ReactNode
 }) {
   const [open, setOpen] = useState(false)
@@ -123,6 +127,7 @@ export function HelpDialog({
             persona={persona}
             task={task}
             initialMessage={initialMessage}
+            to={to}
             onDone={() => setOpen(false)}
           />
         </Dialog.Content>
