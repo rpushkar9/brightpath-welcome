@@ -3,7 +3,16 @@ import { managerIdFor } from '../domain/people'
 import { completionKey, templatesFor } from '../domain/plan'
 import { createSeed } from '../domain/seed'
 import { leaderById } from '../domain/people'
-import type { AppData, Completion, HelpRequest, Hire, IsoDate, Nudge } from '../domain/types'
+import type {
+  ActivityEvent,
+  AppData,
+  Completion,
+  HelpRequest,
+  Hire,
+  Improvement,
+  IsoDate,
+  Nudge,
+} from '../domain/types'
 
 export const STORAGE_KEY = 'brightpath-welcome:v1'
 
@@ -64,9 +73,51 @@ function parseHelpRequest(value: unknown): HelpRequest | null {
   return { id, hireId, taskId, toLeaderId, message, on, status, resolvedBy }
 }
 
+const EVENT_KINDS: ReadonlySet<string> = new Set([
+  'task-completed',
+  'task-reopened',
+  'help-requested',
+  'help-resolved',
+  'nudge-sent',
+  'plan-started',
+])
+const isEventKind = (value: unknown): value is ActivityEvent['kind'] =>
+  typeof value === 'string' && EVENT_KINDS.has(value)
+
+function parseEvent(value: unknown): ActivityEvent | null {
+  if (!isRecord(value)) return null
+  const { seq, kind, hireId, taskId, actor } = value
+  const on = dateOf(value.on)
+  if (typeof seq !== 'number' || !Number.isInteger(seq) || !on || !isEventKind(kind)) return null
+  if (typeof hireId !== 'string' || typeof actor !== 'string') return null
+  if (taskId !== null && typeof taskId !== 'string') return null
+  return { seq, on, kind, hireId, taskId, actor }
+}
+
+function parseImprovement(value: unknown): Improvement | null {
+  if (!isRecord(value)) return null
+  const { id, taskId, note, status, by } = value
+  const createdOn = dateOf(value.createdOn)
+  if (typeof id !== 'string' || typeof taskId !== 'string' || typeof note !== 'string') return null
+  if (typeof by !== 'string' || !createdOn) return null
+  if (status !== 'proposed' && status !== 'under-review' && status !== 'addressed') return null
+  return { id, taskId, note, status, createdOn, by }
+}
+
+function parseSeenThrough(value: unknown): Record<string, number> | null {
+  if (!isRecord(value)) return null
+  const result: Record<string, number> = {}
+  for (const [key, seq] of Object.entries(value)) {
+    if (typeof seq !== 'number' || !Number.isInteger(seq)) return null
+    result[key] = seq
+  }
+  return result
+}
+
 /** Accepts saved data only if every part is well formed and refers to something real. */
 export function parseAppData(value: unknown): AppData | null {
-  if (!isRecord(value) || value.version !== 1) return null
+  // Version 1 has no log or improvements yet, so those start empty and nothing is lost.
+  if (!isRecord(value) || (value.version !== 1 && value.version !== 2)) return null
   const seededOn = dateOf(value.seededOn)
   if (!seededOn || !Array.isArray(value.hires) || !isRecord(value.completions)) return null
   if (!Array.isArray(value.nudges)) return null
@@ -108,7 +159,26 @@ export function parseAppData(value: unknown): AppData | null {
     helpRequests.push(request)
   }
 
-  return { version: 1, seededOn, hires, completions, nudges, helpRequests }
+  const events: ActivityEvent[] = []
+  for (const raw of value.events === undefined ? [] : Array.isArray(value.events) ? value.events : [null]) {
+    const event = parseEvent(raw)
+    if (!event || !hires.some((hire) => hire.id === event.hireId)) return null
+    events.push(event)
+  }
+
+  const improvements: Improvement[] = []
+  const rawImprovements = value.improvements === undefined ? [] : value.improvements
+  if (!Array.isArray(rawImprovements)) return null
+  for (const raw of rawImprovements) {
+    const improvement = parseImprovement(raw)
+    if (!improvement) return null
+    improvements.push(improvement)
+  }
+
+  const seenThrough = value.seenThrough === undefined ? {} : parseSeenThrough(value.seenThrough)
+  if (!seenThrough) return null
+
+  return { version: 2, seededOn, hires, completions, nudges, helpRequests, events, seenThrough, improvements }
 }
 
 export type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>

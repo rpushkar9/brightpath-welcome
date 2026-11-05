@@ -45,7 +45,7 @@ describe('loadData', () => {
     ['broken JSON', '{not json'],
     ['the wrong shape', '[1,2,3]'],
     ['null', 'null'],
-    ['a future version', withSeed((seed) => { seed.version = 2 })],
+    ['a future version', withSeed((seed) => { seed.version = 99 })],
     ['a missing hires list', withSeed((seed) => { delete seed.hires })],
     ['a bad date', withSeed((seed) => { seed.seededOn = '2026-13-40' })],
     ['a completion for nobody', withSeed((seed) => { seed.completions = { 'ghost:c-profile': { on: '2026-11-04', byName: 'X' } } })],
@@ -60,6 +60,31 @@ describe('loadData', () => {
     expect(notice).toBe('restored')
     expect(data.hires).toHaveLength(6)
     expect(parseAppData(JSON.parse(storage.value ?? 'null'))).toEqual(data)
+  })
+
+  it('migrates saved version 1 data without losing progress', () => {
+    const seed = createSeed(today)
+    const old = JSON.parse(JSON.stringify(seed))
+    old.version = 1
+    delete old.events
+    delete old.seenThrough
+    delete old.improvements
+    const { data, notice } = loadData(memoryStorage(JSON.stringify(old)), today)
+    expect(notice).toBe('none')
+    expect(data.version).toBe(2)
+    expect(data.completions).toEqual(seed.completions)
+    expect(data.helpRequests).toEqual(seed.helpRequests)
+    expect(data.events).toEqual([])
+    expect(data.improvements).toEqual([])
+  })
+
+  it.each([
+    ['a bad event', (seed: Record<string, unknown>) => { seed.events = [{ seq: 'x' }] }],
+    ['an event for nobody', (seed: Record<string, unknown>) => { seed.events = [{ seq: 1, on: '2026-11-04', kind: 'nudge-sent', hireId: 'ghost', taskId: null, actor: 'X' }] }],
+    ['a bad improvement', (seed: Record<string, unknown>) => { seed.improvements = [{ id: 'x', status: 'weird' }] }],
+    ['bad seen data', (seed: Record<string, unknown>) => { seed.seenThrough = { david: 'x' } }],
+  ])('restores the sample data after %s', (_label, change) => {
+    expect(loadData(memoryStorage(withSeed(change)), today).notice).toBe('restored')
   })
 
   it('accepts data saved before help requests existed', () => {

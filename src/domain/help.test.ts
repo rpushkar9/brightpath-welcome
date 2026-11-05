@@ -8,6 +8,7 @@ import {
   openRequestsFor,
   requestHelp,
   resolveHelp,
+  suggestedQuestions,
 } from './help'
 import { DAVID, RENEE, SARAH } from './people'
 import { buildPlan } from './plan'
@@ -198,6 +199,32 @@ describe('answering questions from the plan', () => {
   it('includes the estimate when asked about one task', () => {
     expect(ask('employee handbook').lines[0]?.text).toContain('About 25 minutes.')
     expect(ask('Who can help with repository access?').lines.find((line) => line.taskId === 'e-repo-grant')?.text).not.toContain('About')
+  })
+
+  it('keeps a finished task to its date', () => {
+    const line = ask('Who can help me with repository access?').lines.find((item) => item.taskId === 'e-access-request')
+    expect(line?.text).toMatch(/^“Request repository access”: Done [A-Z]/)
+    expect(line?.text).not.toContain('yours')
+    expect(line?.text).not.toContain('minutes')
+  })
+
+  it('suggests questions that fit where the person is', () => {
+    const data = seed()
+    const of = (id: string) => suggestedQuestions(buildPlan(hireOf(data, id), data, today))
+    expect(of('aisha-rahman')).toEqual(['What have I finished?', 'Who can help me?'])
+    expect(of('emily-carter')).toContain('What am I waiting on?')
+    expect(of('marcus-webb')).toContain('What’s late?')
+    expect(ask('What’s late?', 'marcus-webb').lines.length).toBeGreaterThan(0)
+    expect(ask('What have I finished?', 'aisha-rahman').lines[0]?.text).toContain('12 of your 12')
+  })
+
+  it('can send a general question to HR, but a task question goes to whoever can act', () => {
+    const data = seed()
+    const persona = asEmployee(data, 'emily-carter')
+    const general = mustOk(requestHelp(data, persona, null, 'Hi', today, SARAH))
+    expect(general.helpRequests.at(-1)?.toLeaderId).toBe('sarah')
+    const task = mustOk(requestHelp(data, persona, 'c-handbook', 'Hi', today, SARAH))
+    expect(task.helpRequests.at(-1)?.toLeaderId).toBe('david')
   })
 
   it('admits when it cannot answer, rather than guessing', () => {

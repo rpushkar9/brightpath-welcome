@@ -1,4 +1,5 @@
 import { endOfWeek, formatLong } from './dates'
+import { recordEvent } from './events'
 import { firstName, leaderById, SARAH } from './people'
 import { buildPlan, nextSteps, ownProgress, progress, timeLeft, timeLeftText } from './plan'
 import { ownerName, statusLabel } from './rules'
@@ -37,6 +38,8 @@ export function requestHelp(
   taskId: string | null,
   message: string,
   today: IsoDate,
+  /** A general question can go to HR instead of the manager. */
+  to?: Leader,
 ): Result {
   if (persona.kind !== 'employee') {
     return { ok: false, reason: 'Only the new hire can ask from this screen.' }
@@ -66,16 +69,27 @@ export function requestHelp(
     id: `help-${hire.id}-${count + 1}`,
     hireId: hire.id,
     taskId,
-    toLeaderId: helpRecipient(hire, task ?? null).id,
+    toLeaderId: (to && !task ? to : helpRecipient(hire, task ?? null)).id,
     message: text,
     on: today,
     status: 'open',
     resolvedBy: null,
   }
-  return { ok: true, data: { ...data, helpRequests: [...data.helpRequests, request] } }
+  return {
+    ok: true,
+    data: recordEvent(
+      { ...data, helpRequests: [...data.helpRequests, request] },
+      { kind: 'help-requested', on: today, hireId: hire.id, taskId, actor: hire.name },
+    ),
+  }
 }
 
-export function resolveHelp(data: AppData, persona: Persona, requestId: string): Result {
+export function resolveHelp(
+  data: AppData,
+  persona: Persona,
+  requestId: string,
+  today: IsoDate = data.seededOn,
+): Result {
   const request = data.helpRequests.find((item) => item.id === requestId)
   if (!request) return { ok: false, reason: 'That request no longer exists.' }
   if (persona.kind !== 'leader' || persona.leader.id !== request.toLeaderId) {
@@ -84,12 +98,21 @@ export function resolveHelp(data: AppData, persona: Persona, requestId: string):
   if (request.status === 'resolved') return { ok: false, reason: 'This request is already resolved.' }
   return {
     ok: true,
-    data: {
-      ...data,
-      helpRequests: data.helpRequests.map((item) =>
-        item.id === requestId ? { ...item, status: 'resolved', resolvedBy: persona.leader.name } : item,
-      ),
-    },
+    data: recordEvent(
+      {
+        ...data,
+        helpRequests: data.helpRequests.map((item) =>
+          item.id === requestId ? { ...item, status: 'resolved', resolvedBy: persona.leader.name } : item,
+        ),
+      },
+      {
+        kind: 'help-resolved',
+        on: today,
+        hireId: request.hireId,
+        taskId: request.taskId,
+        actor: persona.leader.name,
+      },
+    ),
   }
 }
 
@@ -147,10 +170,14 @@ function ownerSentence(task: PlanTask, hire: Hire): string {
   return `${ownerName(owner, hire)} owns this.`
 }
 
+// A finished task needs only its date. Its owner and estimate no longer help anyone.
 const taskLine = (task: PlanTask, hire: Hire): HelpLine => ({
-  text: `“${task.template.title}”: ${statusLabel(task.status, hire)}. ${ownerSentence(task, hire)}${
-    task.template.minutes === null ? '' : ` About ${task.template.minutes} minutes.`
-  }`,
+  text:
+    task.status.kind === 'completed'
+      ? `“${task.template.title}”: ${statusLabel(task.status, hire)}.`
+      : `“${task.template.title}”: ${statusLabel(task.status, hire)}. ${ownerSentence(task, hire)}${
+          task.template.minutes === null ? '' : ` About ${task.template.minutes} minutes.`
+        }`,
   taskId: task.template.id,
 })
 
@@ -289,9 +316,15 @@ export function answerQuestion(question: string, hire: Hire, data: AppData, toda
   }
 }
 
-export const SUGGESTED_QUESTIONS = [
-  'What should I do next?',
-  'What am I waiting on?',
-  'What’s due this week?',
-  'Who can help me?',
-] as const
+/** Questions that fit where this person is right now. */
+export function suggestedQuestions(plan: PlanTask[]): string[] {
+  const mine = own(plan)
+  if (plan.every((task) => task.status.kind === 'completed')) {
+    return ['What have I finished?', 'Who can help me?']
+  }
+  const questions = ['What should I do next?']
+  if (mine.some((task) => task.status.kind === 'overdue')) questions.push('What’s late?')
+  if (mine.some((task) => task.status.kind === 'waiting')) questions.push('What am I waiting on?')
+  questions.push('What’s due this week?', 'Who can help me?')
+  return questions.slice(0, 4)
+}

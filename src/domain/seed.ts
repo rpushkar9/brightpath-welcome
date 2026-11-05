@@ -11,6 +11,8 @@ type SeedPerson = {
   /** Business days since the start date. Negative means they have not started. */
   dayOffset: number
   isDone: (task: TaskTemplate) => boolean
+  /** Sample history: tasks finished this many business days after they were due. */
+  finishedLate?: Readonly<Record<string, number>>
 }
 
 const dueBy = (day: number, except: readonly string[] = []) => (task: TaskTemplate) =>
@@ -34,6 +36,7 @@ const PEOPLE: readonly SeedPerson[] = [
     department: 'engineering',
     dayOffset: 11,
     isDone: dueBy(11, ['c-benefits', 'e-first-pr']),
+    finishedLate: { 'e-repo-grant': 2 },
   },
   {
     id: 'jordan-lee',
@@ -50,6 +53,7 @@ const PEOPLE: readonly SeedPerson[] = [
     department: 'sales',
     dayOffset: 7,
     isDone: dueBy(4, ['s-product']),
+    finishedLate: { 's-crm-account': 1 },
   },
   {
     id: 'aisha-rahman',
@@ -58,6 +62,7 @@ const PEOPLE: readonly SeedPerson[] = [
     department: 'sales',
     dayOffset: 25,
     isDone: () => true,
+    finishedLate: { 's-crm-account': 3, 's-crm': 1 },
   },
   {
     id: 'tomas-rivera',
@@ -104,7 +109,8 @@ export function createSeed(today: IsoDate): AppData {
     templatesFor(person.department).forEach((task, index) => {
       if (!person.isDone(task)) return
       // Alternating on-time and one-day-early keeps sample history from looking machine-made.
-      const onDue = addBusinessDays(hire.startDate, task.dueDay - (index % 2))
+      const lateBy = person.finishedLate?.[task.id]
+      const onDue = addBusinessDays(hire.startDate, lateBy ? task.dueDay + lateBy : task.dueDay - (index % 2))
       const opens = addBusinessDays(hire.startDate, task.opensDay)
       const notBeforeOpen = onDue < opens ? opens : onDue
       const on = notBeforeOpen > seededOn ? seededOn : notBeforeOpen
@@ -114,7 +120,29 @@ export function createSeed(today: IsoDate): AppData {
     return hire
   })
 
+  const startOf = (id: string): IsoDate =>
+    hires.find((hire) => hire.id === id)?.startDate ?? seededOn
   const helpRequests: HelpRequest[] = [
+    {
+      id: 'help-priya-nair-1',
+      hireId: 'priya-nair',
+      taskId: 'e-local-setup',
+      toLeaderId: 'sarah',
+      message: 'I’m waiting on “Grant repository access” so I can start “Run the local setup”. Can you check on it?',
+      on: addBusinessDays(startOf('priya-nair'), 2),
+      status: 'resolved',
+      resolvedBy: 'Sarah Mitchell',
+    },
+    {
+      id: 'help-marcus-webb-1',
+      hireId: 'marcus-webb',
+      taskId: 's-crm',
+      toLeaderId: 'sarah',
+      message: 'I can’t find where to log a practice lead in the CRM. Who can show me?',
+      on: addBusinessDays(startOf('marcus-webb'), 3),
+      status: 'resolved',
+      resolvedBy: 'Sarah Mitchell',
+    },
     {
       id: 'help-tomas-rivera-1',
       hireId: 'tomas-rivera',
@@ -128,7 +156,18 @@ export function createSeed(today: IsoDate): AppData {
     },
   ]
 
-  return { version: 1, seededOn, hires, completions, nudges: [], helpRequests }
+  // The activity log starts empty, because sample history did not happen while anyone watched.
+  return {
+    version: 2,
+    seededOn,
+    hires,
+    completions,
+    nudges: [],
+    helpRequests,
+    events: [],
+    seenThrough: {},
+    improvements: [],
+  }
 }
 
 export const DEFAULT_HIRE_ID = 'emily-carter'

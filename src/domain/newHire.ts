@@ -1,5 +1,6 @@
 import { addCalendarDays, isWeekend, parseIsoDate } from './dates'
-import { managerIdFor } from './people'
+import { recordEvent } from './events'
+import { SARAH, managerIdFor } from './people'
 import type { AppData, Department, Hire, IsoDate } from './types'
 
 export type NewHireInput = {
@@ -90,7 +91,8 @@ export function validateNewHire(
   }
 }
 
-export const addHire = (data: AppData, hire: Hire): AppData => ({
-  ...data,
-  hires: [...data.hires, hire],
-})
+export const addHire = (data: AppData, hire: Hire): AppData =>
+  recordEvent(
+    { ...data, hires: [...data.hires, hire] },
+    { kind: 'plan-started', on: hire.planCreatedOn ?? data.seededOn, hireId: hire.id, taskId: null, actor: SARAH.name },
+  )

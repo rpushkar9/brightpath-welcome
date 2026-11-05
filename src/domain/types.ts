@@ -60,14 +60,46 @@ export type HelpRequest = {
   resolvedBy: string | null
 }
 
+export type ActivityEvent = {
+  /** Increases with each event. Used instead of the clock to tell what is new. */
+  seq: number
+  on: IsoDate
+  kind:
+    | 'task-completed'
+    | 'task-reopened'
+    | 'help-requested'
+    | 'help-resolved'
+    | 'nudge-sent'
+    | 'plan-started'
+  hireId: string
+  taskId: string | null
+  actor: string
+}
+
+export type ImprovementStatus = 'proposed' | 'under-review' | 'addressed'
+
+export type Improvement = {
+  id: string
+  taskId: string
+  note: string
+  status: ImprovementStatus
+  createdOn: IsoDate
+  by: string
+}
+
 export type AppData = {
-  version: 1
+  version: 2
   seededOn: IsoDate
   hires: Hire[]
   /** Keyed by `completionKey(hireId, taskId)`. */
   completions: Record<string, Completion>
   nudges: Nudge[]
   helpRequests: HelpRequest[]
+  /** What actually happened, in order. Sample history from before the log began is not invented. */
+  events: ActivityEvent[]
+  /** The last event each leader has seen, for "what changed since your last visit". */
+  seenThrough: Record<string, number>
+  improvements: Improvement[]
 }
 
 export type Persona = { kind: 'employee'; hire: Hire } | { kind: 'leader'; leader: Leader }

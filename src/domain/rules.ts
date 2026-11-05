@@ -1,4 +1,5 @@
 import { formatShort } from './dates'
+import { recordEvent } from './events'
 import { firstName, leaderById } from './people'
 import { buildPlan, completionKey, hireHealth, templatesFor } from './plan'
 import type {
@@ -106,13 +107,16 @@ export function completeTask(
     case 'outstanding':
       return {
         ok: true,
-        data: {
-          ...data,
-          completions: {
-            ...data.completions,
-            [completionKey(hireId, taskId)]: { on: today, byName: personaName(persona) },
+        data: recordEvent(
+          {
+            ...data,
+            completions: {
+              ...data.completions,
+              [completionKey(hireId, taskId)]: { on: today, byName: personaName(persona) },
+            },
           },
-        },
+          { kind: 'task-completed', on: today, hireId, taskId, actor: personaName(persona) },
+        ),
       }
     default: {
       const exhaustive: never = task.status
@@ -147,7 +151,13 @@ export function undoTask(
   }
 
   const { [completionKey(hireId, taskId)]: _removed, ...completions } = data.completions
-  return { ok: true, data: { ...data, completions } }
+  return {
+    ok: true,
+    data: recordEvent(
+      { ...data, completions },
+      { kind: 'task-reopened', on: today, hireId, taskId, actor: personaName(persona) },
+    ),
+  }
 }
 
 const nudgedToday = (data: AppData, hireId: string, today: IsoDate): boolean =>
@@ -186,19 +196,22 @@ export function sendNudge(
   }
   return {
     ok: true,
-    data: {
-      ...data,
-      nudges: [
-        ...data.nudges,
-        {
-          hireId,
-          taskId: target.template.id,
-          fromName: persona.leader.name,
-          on: today,
-          dismissed: false,
-        },
-      ],
-    },
+    data: recordEvent(
+      {
+        ...data,
+        nudges: [
+          ...data.nudges,
+          {
+            hireId,
+            taskId: target.template.id,
+            fromName: persona.leader.name,
+            on: today,
+            dismissed: false,
+          },
+        ],
+      },
+      { kind: 'nudge-sent', on: today, hireId, taskId: target.template.id, actor: persona.leader.name },
+    ),
   }
 }
 
@@ -241,6 +254,25 @@ export function leaderActions(persona: Persona, data: AppData, today: IsoDate): 
         a.task.dueOn.localeCompare(b.task.dueOn) ||
         a.hire.name.localeCompare(b.hire.name),
     )
+}
+
+/** Work on this leader's team that someone else owns and that is holding up a new hire. */
+export function blockedElsewhere(persona: Persona, data: AppData, today: IsoDate): LeaderAction[] {
+  if (persona.kind !== 'leader') return []
+  return data.hires
+    .filter((hire) => canView(persona, hire))
+    .flatMap((hire) => {
+      const plan = buildPlan(hire, data, today)
+      return plan
+        .filter(
+          (task) =>
+            task.status.kind !== 'completed' &&
+            !canAct(persona, hire, task.template.owner) &&
+            task.template.owner !== 'employee',
+        )
+        .map((task) => ({ hire, task, blocks: blockedBy(plan, task.template.id) }))
+        .filter((item) => item.blocks.length > 0)
+    })
 }
 
 export function healthReason(health: HireHealth, hire: Hire): string {

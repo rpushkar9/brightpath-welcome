@@ -29,7 +29,7 @@ const hire = (overrides: Partial<Hire> = {}): Hire => ({
 })
 
 const data = (hires: Hire[], done: string[] = []): AppData => ({
-  version: 1,
+  version: 2,
   seededOn: start,
   hires,
   completions: Object.fromEntries(
@@ -37,6 +37,9 @@ const data = (hires: Hire[], done: string[] = []): AppData => ({
   ),
   nudges: [],
   helpRequests: [],
+  events: [],
+  seenThrough: {},
+  improvements: [],
 })
 
 const find = (plan: PlanTask[], id: string): PlanTask => {
