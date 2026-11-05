@@ -97,8 +97,6 @@ Fixing one person's problem does not fix the process, so Sarah can see which tas
   <img src="docs/screenshots/insights-phone.png" alt="Insights on a phone" width="260">
 </p>
 
-Screens from before this redesign are in [docs/screenshots/before/](docs/screenshots/before/).
-
 ## What is real and what is simulated
 
 | Real in this prototype | Simulated or absent |
@@ -113,8 +111,6 @@ Screens from before this redesign are in [docs/screenshots/before/](docs/screens
 
 ## Key assumptions
 
-The full list, with what I would ask Sarah about each, is in [docs/decisions.md](docs/decisions.md).
-
 - Emily is an engineer on David's team. The scenario does not give Emily a department.
 - A task becomes overdue on the next business day after its due date.
 - A task waiting on someone else is never overdue. The late task counts once, against its own owner.
@@ -122,10 +118,18 @@ The full list, with what I would ask Sarah about each, is in [docs/decisions.md]
 - "Needs attention" means two or more overdue tasks, or one task at least three business days late.
 - Sarah stands in for IT, because the prototype has no IT role.
 
+## What I would ask Sarah next
+
+- Which tasks must every department complete?
+- Which dates are legally fixed?
+- What would make you step in for a new hire?
+- Who chases IT today?
+- Which questions do new hires ask you most often?
+
 ## What I left out, and why
 
 - **Template editor and rule engine.** Sarah said "eventually", and plans are already data that a later builder can use.
-- **A real AI model.** It would need a secure backend, and a frontend API key is not acceptable. The guardrails I would use are in [docs/next-steps.md](docs/next-steps.md).
+- **A real AI model.** It would need a secure backend, and a frontend API key is not acceptable. A model should answer only from sources it can cite, send sensitive questions to HR, and never mark a task done or judge an employee.
 - **Real documents, e-signature, and I-9 handling.** Faking compliance is risky.
 - **Email and calendar connections.** They need a backend, and I would not invent addresses.
 - **Decorative charts and gamification.** Neither answers a question in the brief.
@@ -138,7 +142,7 @@ The full list, with what I would ask Sarah about each, is in [docs/decisions.md]
 - **`src/store/`** validates saved data on load, migrates older versions, and re-reads before each change.
 - **The URL holds the person and screen,** so two windows can show different people.
 
-[docs/technical-notes.md](docs/technical-notes.md) explains what carries over to a real product, what is simulated, and what would move to a server.
+In a real product, the rules in `src/domain/` and their tests carry over. Sign-in, permissions, data, and reminders would move to a server, with every read and write checked there.
 
 ## Testing
 
@@ -150,11 +154,20 @@ npm run build        # type-check and production build
 
 The browser tests cover journeys across roles, refresh, tab sync, corrupted and blocked storage, older saved data, bad links, form validation, weekend dates, keyboard use, reduced motion, and phone layouts. They also run an axe accessibility scan on key screens at desktop and phone widths.
 
-I also checked the AI's work by hand. [docs/ai-review-log.md](docs/ai-review-log.md) records what those checks found, including tests that could not fail and passing tests that hid a visible bug.
+
+## How I checked the AI's work
+
+I built this with Claude Code, used separate AI reviews, and tried each role myself. Passing tests were not enough:
+
+- All tests passed on a pinned back button that felt wrong when I used it, so I had it moved.
+- All tests passed while the tour's spotlight pointed at empty space. Reviewing screenshots caught it, and position tests now cover it.
+- An independent review found a question sent to HR showing up in a manager's activity feed. Events now carry an audience, and a test covers it.
 
 ## Time
 
-The assignment asks to stop at 3 hours. By my computer's clock, the first complete version took about 3 hours 15 minutes, including time spent reviewing and waiting. That version is commit `ade4fe7`. I then chose to keep improving the product, so the redesign and Insights came after the limit. The commit history shows this.
+The assignment asks to stop at 3 hours. By my computer's clock, the first complete version took about 3 hours 15 minutes, including time spent reviewing and waiting. That version is commit `ade4fe7`. I then chose to keep improving the product, so the redesign and Insights came after the limit.
+
+Across all of it, I was hands-on for roughly two and a half hours. Elapsed time was longer, because the AI kept working while I stepped away. The commit history shows the timing.
 
 ## Known limitations
 
@@ -165,13 +178,3 @@ The assignment asks to stop at 3 hours. By my computer's clock, the first comple
 - Sample dates stay fixed until you reset them, so overdue counts grow if you return days later.
 - If you create the sample data on a weekend, Emily's first day is the previous Friday, so Emily appears in the first week.
 - A task becoming overdue is not recorded as activity, because nothing runs while the app is closed.
-
-## More documents
-
-- [Demo script](docs/demo-script.md)
-- [Product plan and rules](docs/plan.md)
-- [Assumptions and decisions](docs/decisions.md)
-- [What comes next, including AI guardrails](docs/next-steps.md)
-- [Technical notes](docs/technical-notes.md)
-- [AI review log](docs/ai-review-log.md)
-- [Research notes](docs/research/)
