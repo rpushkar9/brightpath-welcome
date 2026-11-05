@@ -2,15 +2,13 @@
 
 BrightPath Welcome is a working onboarding prototype for BrightPath Technologies, a fictional company of about 150 employees. I built it for the MangoApps Associate Product Manager, AI Builder take-home (Scenario 1).
 
-New hires see what to focus on next. Managers and HR see who is on track and who needs help.
+Each person gets a clear answer to their own question:
+
+- **New hires:** what should I do next, and who can help me?
+- **Managers:** who needs my attention, and what should I do?
+- **HR:** how is onboarding going, and where does our process need improvement?
 
 ![A new hire's home screen on day one](docs/screenshots/new-hire-home.png)
-
-## Who it serves
-
-- **New hires** want to know what to do first, without facing a long checklist on day one.
-- **Hiring managers** need to see how their own new hires are progressing.
-- **HR** needs to see everyone and start plans.
 
 ## Run it
 
@@ -23,9 +21,9 @@ npm run dev
 
 Open the URL that Vite prints. It is usually http://localhost:5173.
 
-The prototype has no login. A short tour opens by itself the first time each person is viewed in a browser. To replay it, click **Show me around** at the top right. On a phone, it is in the **View as** menu, which also switches people and resets the demo data.
+The prototype has no login. A short tour opens the first time each person is viewed in a browser. To replay it, click **Show me around**. Use the **View as** menu to switch people and to reset the demo data. On a phone, both are in that menu.
 
-To see the employee and manager views update together, open the app in two windows and choose a different person in each.
+To see the views update together, open the app in two windows and choose a different person in each.
 
 ## How the disagreement is resolved
 
@@ -37,74 +35,80 @@ David wants department-specific requirements. Emily does not want to see 40 task
 ## What works
 
 **New hire**
-- A home screen with stage and up to three next steps. Progress shows the person's own tasks apart from the whole plan.
-- Separate lists for tasks waiting on someone else and for what is coming up.
-- A journey across four stages, where position shows time and only the text shows completed tasks.
-- A first task that shows why it matters and what to do, with an estimate of how long the open tasks should take. Tasks with no estimate are counted, not guessed.
-- "Have a question?", which answers from the person's own plan. It uses simple matching, not AI, and says so. It admits when it cannot answer.
-- "Ask for help", which sends a prepared in-app request to the person who can act, and shows its status.
-- A full plan grouped by phase.
-- Task details with complete and undo.
-- Completed, outstanding, upcoming, waiting, and overdue states. Each one has its own colour, icon, and text.
+- A home screen with a journey across four stages. Position shows time, and only the text shows completed tasks.
+- Up to three next steps. The first shows why it matters and what to do, with an estimate of how long the open tasks should take.
+- Progress that shows the person's own tasks apart from the whole plan.
+- Blocked tasks that name the owner and the exact prerequisite, say if it is late, and never count against the new hire.
+- "Have a question?", which answers from the person's own plan. It uses simple matching, not AI, and says so.
+- "Ask for help", which sends a prepared request to the person who can act, and shows its status.
+- A full plan grouped by phase, with complete and undo on task details.
+- A useful finished state, with the completed plan and sample resources.
 
-**Manager and HR**
-- "Who needs attention" cards that say who, why, and what to do next.
-- Help requests sent by new hires, which the recipient can resolve.
-- A short "Your next actions" list of the tasks that person can complete. Each row links to the real task and names any work it blocks. Sarah sees HR and IT tasks apart.
-- A roster sorted by need, with the reason for each flag written out, including who owns the overdue work.
-- A filter, and a detail page with the same plan the new hire sees.
-- A nudge that appears on the new hire's home screen.
-- Managers see only their own team. HR sees everyone.
+**Manager**
+- Cards that say who needs attention, why, and what to do next.
+- Their own tasks, kept apart from work with IT or HR that is holding up the team.
+- "What changed since your last visit", from a real activity log.
+- A roster of their own team only.
 
-**HR only**
-- A form that starts a new plan. The preview changes with the department, and the form rejects bad input.
+**HR, in three areas**
+- **Overview:** who needs attention, help requests, and HR and IT tasks kept apart.
+- **People:** every new hire, with status and department filters, sorting, and a form to start a new plan.
+- **Insights:** "Where people get stuck", described below.
 
 **Across the app**
-- A guided tour for each person's view, which opens on their first visit and can be replayed. It works by keyboard and on phones, and it changes no data.
-- Links to the task being discussed, from nudges, help requests, reasons for a flag, and blocked tasks.
 - Changes persist through a refresh and sync live between tabs.
 - Every screen has its own link, and bad links show a clear message.
-- Detail screens have a clear Back button on the left above the title, and long pages have another at the end. New pages open at the top, and going back returns to your place in the list.
-- Sample dates are relative to the day the data was created, so the demo does not go stale.
+- A short tour for each person, which works by keyboard and on phones. It changes no data.
+- Links to the task being discussed, from nudges, help requests, and reasons for a flag.
+
+## Where people get stuck
+
+Fixing one person's problem does not fix the process, so Sarah can see which tasks trip up more than one hire.
+
+![Where people get stuck](docs/screenshots/insights.png)
+
+- **It uses real records.** Figures come from current plans, completion dates, and help requests. Sample data is labelled as sample data, and nothing is a trend.
+- **It counts carefully.** Each hire counts once per task. Requests are counted apart from the people asking. Overdue now, finished late, and blocking are kept apart.
+- **It separates patterns from one-offs.** One person's delay stays out of the way until asked for.
+- **It says what it does not know.** Each task lists what the records cannot show, such as why something ran late.
+- **Suggestions come from simple rules,** and are labelled "Suggestion, not a proven cause".
+- **Sarah can propose an improvement.** A proposal goes in a queue with a status. It never changes a live plan or a legal requirement.
 
 ## Screenshots
 
-**The first visit opens a short tour.** Each person gets their own.
+**HR overview:** what needs attention now.
 
-![First-visit tour](docs/screenshots/first-visit-tour.png)
+![HR overview](docs/screenshots/hr-team.png)
 
-**A blocked task names who owns the blocker, and asking for help takes one click.**
+**Manager dashboard:** whose work is whose, and what changed.
 
-![Asking for help](docs/screenshots/ask-for-help.png)
+![Manager dashboard](docs/screenshots/manager-team.png)
 
-**The team page says who needs attention, why, and what to do next.**
+**A blocked task** does not read as ready to start.
 
-![HR team page](docs/screenshots/hr-team.png)
+![A blocked task](docs/screenshots/task-details.png)
 
-**Detail screens have a clear way back on the left, and the reason for a flag links to the task.**
-
-![Hire detail](docs/screenshots/hire-detail.png)
-
-**Phone layouts are designed separately, not squeezed from desktop.**
+**Phone layouts** have their own structure, with a tab bar and a shorter page.
 
 <p>
-  <img src="docs/screenshots/new-hire-phone.png" alt="New hire home on a phone" width="280">
-  <img src="docs/screenshots/hire-detail-phone.png" alt="Hire detail on a phone" width="280">
+  <img src="docs/screenshots/new-hire-phone.png" alt="New hire home on a phone" width="260">
+  <img src="docs/screenshots/hr-team-phone.png" alt="HR overview on a phone" width="260">
+  <img src="docs/screenshots/insights-phone.png" alt="Insights on a phone" width="260">
 </p>
+
+Screens from before this redesign are in [docs/screenshots/before/](docs/screenshots/before/).
 
 ## What is real and what is simulated
 
 | Real in this prototype | Simulated or absent |
 |---|---|
-| Status, progress, and permission rules | Login. The View as menu stands in for it |
+| Status, progress, insights, and permission rules | Login. The View as menu stands in for it, so nothing here is secure |
 | Saved changes, in this browser's localStorage | A server. Nothing is shared between browsers |
 | Nudges and help requests, which appear in the app | Email and Slack. The screen says that no email is sent |
 | Answers to questions, from the person's real plan | An AI model. Using one would need a secure backend, so the panel says "not AI" |
-| Plans created from company and department task lists | A rule engine or AI plan generation |
+| An activity log of what happens from now on | History before the log began. It is not invented |
 | Six short sample documents you can read in the task drawer | Real company documents. Each excerpt is labelled as a sample |
 | Marking a task complete, as the person's own confirmation | Documents, forms, and e-signature. The screen says that checking off does not submit or verify anything |
-
-Sarah also stands in for IT, because the prototype has no IT role.
 
 ## Key assumptions
 
@@ -112,53 +116,61 @@ The full list, with what I would ask Sarah about each, is in [docs/decisions.md]
 
 - Emily is an engineer on David's team. The scenario does not give Emily a department.
 - A task becomes overdue on the next business day after its due date.
-- A task that is waiting on someone else is never overdue. The late task counts once, against its own owner.
+- A task waiting on someone else is never overdue. The late task counts once, against its own owner.
 - Upcoming tasks cannot be completed early.
 - "Needs attention" means two or more overdue tasks, or one task at least three business days late.
-- Plans cover about the first 30 days, and task wording assumes a US employer.
+- Sarah stands in for IT, because the prototype has no IT role.
 
 ## What I left out, and why
 
 - **Template editor and rule engine.** Sarah said "eventually", and plans are already data that a later builder can use.
-- **AI plan generation and a real AI assistant.** The MangoApps public site already advertises AI-drafted plans, and an assistant would need a secure backend. A frontend API key is not acceptable, so questions use simple rules instead.
+- **A real AI model.** It would need a secure backend, and a frontend API key is not acceptable. The guardrails I would use are in [docs/next-steps.md](docs/next-steps.md).
 - **Real documents, e-signature, and I-9 handling.** Faking compliance is risky.
-- **Email and calendar connections.** They need a backend.
-- **Charts and gamification.** Neither answers a question in the brief.
-- **MangoApps colours.** BrightPath is the customer, so the prototype keeps its own identity. Orange and yellow would also sit too close to the Watch and overdue colours.
-
-The full exclusions table is in [docs/plan.md](docs/plan.md).
+- **Email and calendar connections.** They need a backend, and I would not invent addresses.
+- **Decorative charts and gamification.** Neither answers a question in the brief.
 
 ## Technical choices
 
 - **React, TypeScript, and Vite** run with no server, so anyone can start the app with two commands.
 - **Tailwind CSS v4** holds the design tokens. **Radix** provides the accessible drawer and menu.
-- **`src/domain/`** holds the product rules as pure functions that take `today` as an argument. Tests can fix the date, and every screen uses the same progress calculation.
-- **`src/store/`** validates saved data on load and re-reads it before each change, so a stale tab cannot overwrite newer work.
-- **The URL holds the person and screen.** Two windows can show different people, and links survive a refresh.
+- **`src/domain/`** holds the product rules as pure functions that take `today` as an argument, so every screen shares one calculation.
+- **`src/store/`** validates saved data on load, migrates older versions, and re-reads before each change.
+- **The URL holds the person and screen,** so two windows can show different people.
+
+[docs/technical-notes.md](docs/technical-notes.md) explains what carries over to a real product, what is simulated, and what would move to a server.
 
 ## Testing
 
 ```bash
-npm test             # 174 unit tests
-npm run test:e2e     # 138 browser tests, using your installed Chrome
+npm test             # 214 unit tests
+npm run test:e2e     # 169 browser tests, using your installed Chrome
 npm run build        # type-check and production build
 ```
 
-The browser tests cover the full journey across roles, refresh, tab sync, corrupted and blocked storage, bad links, form validation, weekend dates, keyboard use, and reduced motion. They also run an axe accessibility scan on 10 screens at desktop and phone widths, and check for sideways scrolling.
+The browser tests cover journeys across roles, refresh, tab sync, corrupted and blocked storage, older saved data, bad links, form validation, weekend dates, keyboard use, reduced motion, and phone layouts. They also run an axe accessibility scan on key screens at desktop and phone widths.
 
-I also checked the AI's work by hand. [docs/ai-review-log.md](docs/ai-review-log.md) records what those checks found, including a test that could not fail and research claims that were wrong. Codex reviewed the code and product twice, and a separate AI critic reviewed the screens.
+I also checked the AI's work by hand. [docs/ai-review-log.md](docs/ai-review-log.md) records what those checks found, including tests that could not fail and passing tests that hid a visible bug.
+
+## Time
+
+The assignment asks to stop at 3 hours. By my computer's clock, the first complete version took about 3 hours 15 minutes, including time spent reviewing and waiting. That version is commit `ade4fe7`. I then chose to keep improving the product, so the redesign and Insights came after the limit. The commit history shows this.
 
 ## Known limitations
 
-- I tested only in Chrome, not in Safari or Firefox. Browsers without view transitions skip the cross-fade.
-- Automated accessibility scans catch only some problems, and no one has tested the app with a screen reader.
-- Two tabs that write within the same instant could lose one change. A person clicking cannot realistically cause this, and a real product would use a server.
+- I tested only in Chrome, not in Safari or Firefox. No one has tested the app with a screen reader, on a real phone, or with real users.
+- Automated accessibility scans catch only some problems.
+- Permissions run in the browser, as a demo only.
+- Question answers use simple pattern matching, so unusual wording may not be understood.
 - Sample dates stay fixed until you reset them, so overdue counts grow if you return days later.
 - If you create the sample data on a weekend, Emily's first day is the previous Friday, so Emily appears in the first week.
+- A task becoming overdue is not recorded as activity, because nothing runs while the app is closed.
 
 ## More documents
 
 - [Demo script](docs/demo-script.md)
 - [Product plan and rules](docs/plan.md)
+- [Assumptions and decisions](docs/decisions.md)
 - [What comes next, including AI guardrails](docs/next-steps.md)
+- [Technical notes](docs/technical-notes.md)
+- [AI review log](docs/ai-review-log.md)
 - [Research notes](docs/research/)

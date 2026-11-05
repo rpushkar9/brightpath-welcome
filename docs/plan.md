@@ -125,9 +125,22 @@ Exactly one status applies, checked in this order:
 - A help request goes to Sarah for IT or HR work, and otherwise to the manager. It has a prepared, editable message, and only one can be open per task.
 - Only the recipient can mark it resolved, and the new hire sees that status. No email is sent.
 
+### Insights
+
+- Each task is listed once, using stable template IDs. Affected counts distinct hires, once each.
+- Overdue now, finished late, blocking, and help requests are kept apart. The overdue rule is the plan's own.
+- Tasks affecting more than one hire come first. One-offs are collapsed.
+- Suggestions come from simple rules and are labelled as suggestions. A proposal never changes a live plan.
+
+### Activity
+
+- The app records completions, reopened tasks, requests, resolutions, nudges, and new plans as they happen.
+- A visit lasts for a browser session. A leader's own actions are left out, and an undone completion cancels out.
+- A question sent to one person is visible only to them.
+
 ### Tour
 
-- Each person's tour opens once, the first time they reach their main screen in this browser, and shows only what is on that screen.
+- Each person's tour opens once, the first time they reach their main screen in this browser. It has at most three steps, and shows only what is on that screen.
 - It waits if someone arrives through a link to a task, and it does not open on a bad link.
 - Skipping counts as seen. **Show me around** replays it. Resetting demo data does not bring it back.
 

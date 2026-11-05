@@ -50,6 +50,11 @@ See section 4 of [plan.md](plan.md).
 | D17 | A hand-built tour for each person, opening once on their first visit, with a button to replay it | A tour library, or one tour across all roles | No new dependency, and it cannot change data. A new hire should not be walked through HR's screen. It waits if someone arrives through a link to a task, and resetting demo data does not bring it back |
 | D18 | Anything that mentions a task links to it | Text only | People should not have to hunt for what a nudge or flag refers to |
 | D19 | A solid white Back button at the left above the title, with a second at the end of long pages. The logo goes to your own home | A pale text link, or a bar pinned to the top of the screen | The pale link blended in. A pinned bar did not feel intuitive in user testing. The logo used to jump to Emily, which switched who you were viewing as |
+| D20 | HR has three areas: Overview, People, and Insights | One long page | The old page was too long on phones, and urgent work competed with reference information |
+| D21 | Glass panels on a softly tinted page, with one dark header | A flat white dashboard | It feels calmer and more considered. Text contrast was checked against the strongest tint |
+| D22 | One-off delays are collapsed in Insights | One ranked list | One person being late is not a pattern, and it buried the real ones |
+| D23 | Activity uses a real log, with no invented history, and a question to HR stays private to HR | Inferring activity from current state | A feed that guesses cannot be trusted. Sensitive questions must not reach a manager |
+| D24 | The first-visit tour has three steps, and a click outside closes it | The earlier six-step tour | A long tour worked against the goal of reducing overwhelm |
 | D10 | Radix primitives styled directly | The full shadcn setup | shadcn wraps these same primitives, and we only need a drawer and a menu |
 
 ## Approved decisions

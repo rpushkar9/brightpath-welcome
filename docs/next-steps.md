@@ -1,6 +1,6 @@
 # What comes next
 
-These are ideas for after this prototype. None of them is built, except where noted.
+These are ideas for after this prototype. None of them is built. "What changed since your last visit" and "Where people get stuck" started on this list and are now in the app.
 
 ## If this used a real AI model
 
@@ -33,13 +33,13 @@ The governing rule is that the AI can explain and draft, but it cannot decide or
 
 **Managers**
 
-- "What changed since you last looked", showing completions, new requests, and newly late tasks. This is likely the most valuable manager feature.
+- Newly late tasks in "What changed since your last visit". This needs a server job, because nothing runs while the app is closed.
 - 1:1 prep, with what is finished, what is stuck, and what to ask about.
 - A "starting soon" list of what must be ready before someone's first day.
 
 **HR**
 
-- "Where people get stuck", showing which tasks get the most help requests and run late most often.
+- Trends and durations in "Where people get stuck", once enough real events exist. [Technical notes](technical-notes.md) explain what would have to be recorded first.
 - Adding or removing a task for one person, without a full template editor.
 
 **New hires**
