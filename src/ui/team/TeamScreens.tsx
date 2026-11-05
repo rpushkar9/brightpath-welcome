@@ -388,10 +388,9 @@ function Roster({ rows, leader, today }: { rows: RosterRow[]; leader: Leader; to
   const selectClass = 'min-h-11 rounded-control border border-control bg-surface px-2 text-sm'
 
   return (
-    <>
+    <div data-tour="roster">
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between">
         <div
-          data-tour="roster"
           role="group"
           aria-label="Filter the roster"
           className="-mx-4 flex gap-1.5 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
@@ -539,7 +538,7 @@ function Roster({ rows, leader, today }: { rows: RosterRow[]; leader: Leader; to
           </ul>
         </>
       )}
-    </>
+    </div>
   )
 }
 
@@ -875,7 +874,7 @@ function WhyFlagged({
   taskRoute: (taskId: string) => Route
 }) {
   return (
-    <section className="glass rounded-card px-5 py-4">
+    <section data-tour="hire-why" className="glass rounded-card px-5 py-4">
       <h2 className="text-lg font-semibold">Why flagged</h2>
       <p className="mt-1 text-[15px]">{healthReason(health, hire)}</p>
       <ul className="mt-2 divide-y divide-hairline border-t border-hairline">
@@ -925,7 +924,7 @@ function NudgePanel({
   if (!target && !nudged && others.length === 0) return null
 
   return (
-    <section className="glass rounded-card px-5 py-4">
+    <section data-tour="hire-actions" className="glass rounded-card px-5 py-4">
       <h2 className="text-lg font-semibold">What you can do</h2>
       {target && (
         <>

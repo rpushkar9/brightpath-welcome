@@ -189,7 +189,7 @@ function ListScreen({ leader, today }: { leader: Leader; today: IsoDate }) {
   const recurring = shown.filter((item) => item.affected.length > 1)
   const oneOff = shown.filter((item) => item.affected.length <= 1)
   const queue = (
-    <section className={panel}>
+    <section data-tour="insights-queue" className={panel}>
       <h2 className={h2}>Improvement queue</h2>
       <div className="mt-2">
         {data.improvements.length === 0 ? (
@@ -287,7 +287,7 @@ function ListScreen({ leader, today }: { leader: Leader; today: IsoDate }) {
             ) : (
               <div className="space-y-5">
                 {recurring.length > 0 && (
-                  <section>
+                  <section data-tour="insights-list">
                     <h2 className="mb-2.5 text-xl font-semibold">Affecting more than one hire</h2>
                     <ul className="glass divide-y divide-hairline overflow-hidden rounded-card">
                       {recurring.map((insight) => (
@@ -315,7 +315,7 @@ function ListScreen({ leader, today }: { leader: Leader; today: IsoDate }) {
           </div>
 
           <div className="min-w-0 space-y-4">
-            <section aria-label="Summary" className={`${panel} space-y-2 text-[15px]`}>
+            <section data-tour="insights-summary" aria-label="Summary" className={`${panel} space-y-2 text-[15px]`}>
               <p className="text-lg leading-snug font-semibold">
                 {plural(recurringTotal, 'task affects', 'tasks affect')} more than one hire.
               </p>
@@ -554,7 +554,7 @@ function DetailScreen({ leader, taskId, today }: { leader: Leader; taskId: strin
             </section>
           )}
 
-          <section className={panel}>
+          <section data-tour="insight-suggestion" className={panel}>
             <h2 className={h2}>A possible improvement</h2>
             <p className="mt-2 text-sm font-medium text-waiting">Suggestion, not a proven cause</p>
             <p className="mt-1 text-[15px]">{suggestionFor(insight)}</p>

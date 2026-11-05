@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from 'react'
 
 const SEEN_KEY = 'brightpath-welcome:tour-seen'
-// Turns off first-visit tours entirely. Automated tests use this.
-const ALL_SEEN = '*'
+// This value turns off opening by itself. "Show me around" still works.
+const AUTO_OFF = '*'
 
 let open = false
 const listeners = new Set<() => void>()
@@ -24,29 +24,32 @@ export const useTourOpen = (): boolean =>
     () => open,
   )
 
-function readSeen(raw: string | null): string[] {
-  if (!raw) return []
+const shownThisLoad = new Set<string>()
+// Keeps the choice for this page load if the browser blocks saving it.
+let offThisLoad = false
+
+export function tourOpensOnLoad(): boolean {
+  if (offThisLoad) return false
   try {
-    const parsed: unknown = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : []
+    return window.localStorage.getItem(SEEN_KEY) !== AUTO_OFF
   } catch {
-    return []
+    return true
   }
 }
 
-/**
- * Records that this person has now seen their tour. Returns true only the first time.
- * If nothing can be saved it returns false, so a blocked browser never replays the tour on each visit.
- */
-export function claimFirstVisit(viewerId: string): boolean {
+export function setTourOpensOnLoad(on: boolean): void {
+  offThisLoad = !on
   try {
-    const raw = window.localStorage.getItem(SEEN_KEY)
-    if (raw === ALL_SEEN) return false
-    const seen = readSeen(raw)
-    if (seen.includes(viewerId)) return false
-    window.localStorage.setItem(SEEN_KEY, JSON.stringify([...seen, viewerId]))
-    return true
+    if (on) window.localStorage.removeItem(SEEN_KEY)
+    else window.localStorage.setItem(SEEN_KEY, AUTO_OFF)
   } catch {
-    return false
+    // The choice still holds until the next reload.
   }
+}
+
+/** This is a demo, so each person's tour opens again after every reload. Returns true once per load. */
+export function claimAutoOpen(viewerId: string): boolean {
+  if (!tourOpensOnLoad() || shownThisLoad.has(viewerId)) return false
+  shownThisLoad.add(viewerId)
+  return true
 }

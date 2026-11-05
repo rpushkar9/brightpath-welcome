@@ -73,9 +73,9 @@ const countsText = (plan: PlanTask[]): string => {
   return `Your tasks: ${own.done} of ${own.total} done. Whole plan: ${whole.done} of ${whole.total}.`
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, tour, children }: { title: string; tour?: string; children: React.ReactNode }) {
   return (
-    <section>
+    <section data-tour={tour}>
       <h2 className="mb-2.5 text-xl font-semibold">{title}</h2>
       {children}
     </section>
@@ -306,7 +306,7 @@ function ComingUp({ plan, hire }: { plan: PlanTask[]; hire: Hire }) {
   const items = checkIn ? [...upcoming, checkIn] : upcoming
   if (items.length === 0) return null
   return (
-    <Section title="Coming up">
+    <Section title="Coming up" tour="coming-up">
       <SideList
         items={items.map((task) => ({
           key: task.template.id,
@@ -371,7 +371,7 @@ function Resources({ plan, hire }: { plan: PlanTask[]; hire: Hire }) {
   const items = plan.filter((task) => task.template.reference && RESOURCE_EXCERPTS[task.template.reference])
   if (items.length === 0) return null
   return (
-    <section>
+    <section data-tour="resources">
       <h2 className="mb-2.5 text-xl font-semibold">Revisit your resources</h2>
       <SideList
         items={items.map((task) => ({
@@ -524,13 +524,15 @@ export function EmployeePlan({
         </>
       }
     >
-      <PlanPhases
-        plan={plan}
-        hire={hire}
-        persona={persona}
-        stage={stage}
-        taskRoute={(id) => ({ screen: 'plan', hireId: hire.id, taskId: id })}
-      />
+      <div data-tour="plan-phases">
+        <PlanPhases
+          plan={plan}
+          hire={hire}
+          persona={persona}
+          stage={stage}
+          taskRoute={(id) => ({ screen: 'plan', hireId: hire.id, taskId: id })}
+        />
+      </div>
       <BackAtEnd back={back} />
       <TaskDrawer taskId={taskId} plan={plan} hire={hire} persona={persona} parent={parent} />
     </Shell>

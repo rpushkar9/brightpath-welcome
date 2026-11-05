@@ -129,9 +129,11 @@ test.describe('reduced motion', () => {
   })
 })
 
-const EMILY_STEPS = ['start-here', 'journey', 'ask']
-const DAVID_STEPS = ['attention', 'next-actions', 'with-others']
-const SARAH_STEPS = ['attention', 'help-requests', 'insights-nav']
+const EMILY_STEPS = ['hero', 'journey', 'start-here', 'waiting', 'ask', 'your-people', 'coming-up', 'plan-phases', 'view-as']
+const DAVID_STEPS = ['hero', 'attention', 'next-actions', 'with-others', 'what-changed', 'side-hires', 'roster', 'hire-why', 'hire-actions', 'view-as']
+const SARAH_STEPS = ['hero', 'attention', 'help-requests', 'next-actions', 'what-changed', 'side-hires', 'roster', 'new-plan', 'insights-list', 'insights-summary', 'insights-queue', 'insight-suggestion', 'view-as']
+// The sidebar is not on a phone, so its steps are left out there.
+const onPhone = (steps: readonly string[]) => steps.filter((name) => name !== 'your-people' && name !== 'side-hires')
 
 const card = (page: Page) => page.getByRole('dialog')
 const next = (page: Page) => page.getByRole('button', { name: 'Next', exact: true })
@@ -165,17 +167,21 @@ async function checkEveryStep(page: Page, targets: readonly string[], { noOverla
 test.describe('tour, replayed from the button', () => {
   const start = (page: Page) => page.getByRole('button', { name: 'Show me around' }).click()
 
-  test('walks through a new hire’s screen, then returns, without changing data', async ({ page }) => {
+  test('walks through a new hire’s pages, then returns, without changing data', async ({ page }) => {
     const noErrors = watchForErrors(page)
     await openApp(page)
     const before = await page.evaluate(() => localStorage.getItem('brightpath-welcome:v1'))
     await start(page)
-    await checkEveryStep(page, EMILY_STEPS, { noOverlap: true })
+    await checkEveryStep(page, EMILY_STEPS)
+    // Back crosses pages too, and shows the page that step describes.
     await page.getByRole('button', { name: 'Back', exact: true }).click()
-    await expect(card(page)).toContainText('See where you are')
+    await expect(card(page)).toContainText('Your whole plan')
+    await expect(page).toHaveURL(/me\/emily-carter\/plan$/)
     await next(page).click()
+    await expect(card(page)).toContainText('See it as someone else')
     await page.getByRole('button', { name: 'Finish' }).click()
     await expect(card(page)).toHaveCount(0)
+    await expect(page).toHaveURL(/me\/emily-carter$/)
     await expect(page.locator('main')).toBeFocused()
     expect(await page.evaluate(() => localStorage.getItem('brightpath-welcome:v1'))).toBe(before)
     noErrors()
@@ -184,25 +190,56 @@ test.describe('tour, replayed from the button', () => {
   test('gives a manager and HR their own steps', async ({ page }) => {
     await openApp(page, '#/team/david')
     await start(page)
-    await checkEveryStep(page, DAVID_STEPS, { noOverlap: true })
+    await checkEveryStep(page, DAVID_STEPS)
     await page.getByRole('button', { name: 'Finish' }).click()
 
     await page.goto('/#/team/sarah')
     await start(page)
-    await checkEveryStep(page, SARAH_STEPS, { noOverlap: true })
+    await checkEveryStep(page, SARAH_STEPS)
+  })
+
+  test('steps on another page open that page, and closing returns to where you started', async ({ page }) => {
+    await openApp(page, '#/team/david')
+    await start(page)
+    for (let i = 0; i < 7; i += 1) await next(page).click()
+    await expect(card(page)).toContainText('Why someone is flagged')
+    await expect(page).toHaveURL(/team\/david\/hire\/priya-nair$/)
+    await page.keyboard.press('Escape')
+    await expect(page).toHaveURL(/team\/david$/)
+  })
+
+  test('a step whose target is gone is dropped from the count', async ({ page }) => {
+    await openApp(page, '#/team/sarah')
+    await page.getByRole('button', { name: 'Mark resolved' }).first().click()
+    await start(page)
+    await expect(card(page)).toContainText(`of ${SARAH_STEPS.length - 1}`)
+    await next(page).click()
+    await next(page).click()
+    await expect(card(page)).toContainText('What’s yours to do')
+  })
+
+  test('a step on the sidebar does not scroll the page', async ({ page }) => {
+    await openApp(page, '#/team/david')
+    await start(page)
+    for (let i = 0; i < 9; i += 1) await next(page).click()
+    await expect(card(page)).toContainText('See it as someone else')
+    expect(await page.evaluate(() => window.scrollY)).toBe(0)
   })
 
   test('leaves out steps that are not on this person’s screen', async ({ page }) => {
     await openApp(page, '#/me/aisha-rahman')
     await start(page)
-    await checkEveryStep(page, ['ask'])
+    await checkEveryStep(page, ['ask', 'resources', 'plan-phases', 'view-as'])
+    await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await page.getByRole('button', { name: 'Back', exact: true }).click()
     await expect(card(page)).toContainText('Your onboarding is finished')
   })
 
   test('starting from a detail screen tours the main screen, then returns', async ({ page }) => {
     await openApp(page, '#/team/david/hire/priya-nair')
     await start(page)
-    await expect(card(page)).toContainText('Who needs your help')
+    await expect(card(page)).toContainText('Your team at a glance')
     await expect(page).toHaveURL(/team\/david$/)
     await page.keyboard.press('Escape')
     await expect(page).toHaveURL(/hire\/priya-nair$/)
@@ -211,7 +248,10 @@ test.describe('tour, replayed from the button', () => {
   test('a click outside closes it, and never reaches the page', async ({ page }) => {
     await openApp(page)
     await start(page)
-    await expect(card(page)).toBeVisible()
+    // This step spotlights the button, so the card isn't on top of it.
+    await next(page).click()
+    await next(page).click()
+    await expect(card(page)).toContainText('Start here')
     const button = await page.getByRole('button', { name: 'Mark complete' }).boundingBox()
     if (button) await page.mouse.click(button.x + 10, button.y + 10)
     await expect(card(page)).toHaveCount(0)
@@ -266,55 +306,73 @@ test.describe('tour, replayed from the button', () => {
       await openApp(page)
       await page.getByRole('button', { name: /Emily Carter/ }).click()
       await page.getByRole('menuitem', { name: /Show me around/ }).click()
-      await checkEveryStep(page, EMILY_STEPS)
+      await checkEveryStep(page, onPhone(EMILY_STEPS))
       await page.getByRole('button', { name: 'Finish' }).click()
-      // On a phone, the card must not cover the tab it describes.
       await page.goto('/#/team/sarah')
       await page.getByRole('button', { name: /Sarah Mitchell/ }).click()
       await page.getByRole('menuitem', { name: /Show me around/ }).click()
-      await checkEveryStep(page, SARAH_STEPS, { noOverlap: true })
+      await checkEveryStep(page, onPhone(SARAH_STEPS))
       const overflows = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
       expect(overflows).toBe(false)
     })
   })
 })
 
-test.describe('tour on a first visit', () => {
+test.describe('tour on page load', () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test('opens by itself once, and not again after a refresh', async ({ page }) => {
+  const skip = (page: Page) => page.getByRole('button', { name: 'Skip tour' }).click()
+  const autoOpen = (page: Page) => page.getByRole('checkbox', { name: 'Open this tour on every reload' })
+
+  test('opens by itself, and again after every reload', async ({ page }) => {
     const noErrors = watchForErrors(page)
     await openApp(page, '#/')
-    await expect(card(page)).toContainText('Step 1 of 3')
+    await expect(card(page)).toContainText(`Step 1 of ${EMILY_STEPS.length}`)
     await expect(page).toHaveURL(/me\/emily-carter$/)
-    await page.reload()
-    await expect(page.getByText('Start here')).toBeVisible()
+    await skip(page)
     await expect(card(page)).toHaveCount(0)
+    await page.reload()
+    await expect(card(page)).toContainText(`Step 1 of ${EMILY_STEPS.length}`)
     noErrors()
   })
 
-  test('skipping counts as seen', async ({ page }) => {
+  test('opens after a reload on another page, and closing returns there', async ({ page }) => {
+    await openApp(page, '#/team/sarah/insights')
+    await expect(card(page)).toContainText('Onboarding at a glance')
+    await page.keyboard.press('Escape')
+    await expect(page).toHaveURL(/team\/sarah\/insights$/)
+    await page.reload()
+    await expect(card(page)).toContainText('Onboarding at a glance')
+  })
+
+  test('the checkbox stops it opening by itself, and Show me around still works', async ({ page }) => {
     await openApp(page)
-    await page.getByRole('button', { name: 'Skip tour' }).click()
-    await expect(card(page)).toHaveCount(0)
+    await expect(autoOpen(page)).toBeChecked()
+    await autoOpen(page).uncheck()
+    await skip(page)
     await page.reload()
     await expect(page.getByText('Start here')).toBeVisible()
     await expect(card(page)).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Show me around' }).click()
+    await expect(autoOpen(page)).not.toBeChecked()
+    await autoOpen(page).check()
+    await skip(page)
+    await page.reload()
+    await expect(card(page)).toBeVisible()
   })
 
-  test('each person gets their own tour the first time', async ({ page }) => {
+  test('each person’s tour opens once per page load', async ({ page }) => {
     await openApp(page)
-    await page.getByRole('button', { name: 'Skip tour' }).click()
+    await skip(page)
     await page.getByRole('button', { name: /Emily Carter/ }).click()
     await page.getByRole('menuitem', { name: /David Park/ }).click()
-    await expect(card(page)).toContainText('Who needs your help')
-    await page.getByRole('button', { name: 'Skip tour' }).click()
+    await expect(card(page)).toContainText('Your team at a glance')
+    await skip(page)
     await expect(card(page)).toHaveCount(0)
-    await page.goto('/#/me/emily-carter')
+    await page.getByRole('button', { name: /David Park/ }).click()
+    await page.getByRole('menuitem', { name: /Emily Carter/ }).click()
     await expect(page.getByText('Start here')).toBeVisible()
-    await expect(card(page)).toHaveCount(0)
-    await page.goto('/#/team/david')
-    await expect(page.getByRole('heading', { name: 'Who needs attention' })).toBeVisible()
     await expect(card(page)).toHaveCount(0)
   })
 
@@ -322,7 +380,7 @@ test.describe('tour on a first visit', () => {
     await openApp(page, '#/me/emily-carter/task/c-handbook')
     await expect(page.getByRole('dialog')).toContainText('Why it matters')
     await page.keyboard.press('Escape')
-    await expect(page.getByRole('dialog').filter({ hasText: 'Step 1 of 3' })).toBeVisible()
+    await expect(page.getByRole('dialog').filter({ hasText: 'Step 1 of' })).toBeVisible()
   })
 
   test('does not open on a bad link', async ({ page }) => {
@@ -331,9 +389,9 @@ test.describe('tour on a first visit', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0)
   })
 
-  test('resetting the demo data does not bring tours back', async ({ page }) => {
+  test('resetting the demo data does not reopen it', async ({ page }) => {
     await openApp(page)
-    await page.getByRole('button', { name: 'Skip tour' }).click()
+    await skip(page)
     await page.getByRole('button', { name: /Emily Carter/ }).click()
     await page.getByRole('menuitem', { name: /Reset demo data/ }).click()
     await page.getByRole('button', { name: 'Reset data' }).click()
@@ -341,7 +399,7 @@ test.describe('tour on a first visit', () => {
     await expect(card(page)).toHaveCount(0)
   })
 
-  test('a browser that blocks saving does not replay the tour every time', async ({ page }) => {
+  test('still works in a browser that blocks saving', async ({ page }) => {
     await page.addInitScript(() => {
       Storage.prototype.setItem = () => {
         throw new DOMException('Blocked', 'SecurityError')
@@ -349,6 +407,9 @@ test.describe('tour on a first visit', () => {
     })
     await openApp(page)
     await expect(page.getByText('This browser is blocking saved data')).toBeVisible()
+    await autoOpen(page).uncheck()
+    await expect(autoOpen(page)).not.toBeChecked()
+    await skip(page)
     await expect(card(page)).toHaveCount(0)
   })
 })

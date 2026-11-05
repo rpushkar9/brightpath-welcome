@@ -9,7 +9,7 @@ import { useStore } from '../store/store'
 import { UNDO_TOAST_ID } from '../ui/actions'
 import { MessageScreen } from '../ui/Shell'
 import { Tour } from '../ui/Tour'
-import { claimFirstVisit, startTour } from '../ui/tourState'
+import { claimAutoOpen, startTour } from '../ui/tourState'
 import { EmployeeHome, EmployeePlan } from '../ui/employee/EmployeeScreens'
 import { InsightsView } from '../ui/team/Insights'
 import { HireDetail, NewHireForm, PeopleView, TeamView } from '../ui/team/TeamScreens'
@@ -79,16 +79,20 @@ function Screen() {
     })
   }, [hasOverlay])
 
-  // The first time someone arrives on their main screen, their tour opens by itself.
-  // A link to a specific task or a bad link is left alone, and counts as not yet seen.
-  const isMainScreen = route.screen === 'team' || (route.screen === 'home' && route.taskId === null)
+  // After each page load, a person's tour opens by itself the first time they are viewed.
+  // An open task or a bad link is left alone, and the tour waits until that closes.
   const personExists =
-    route.screen === 'home'
+    route.screen === 'home' || route.screen === 'plan'
       ? data.hires.some((hire) => hire.id === route.hireId)
-      : route.screen === 'team' && leaderById(route.leaderId) !== undefined
+      : (route.screen === 'team' ||
+          route.screen === 'people' ||
+          route.screen === 'insights' ||
+          route.screen === 'hire') &&
+        leaderById(route.leaderId) !== undefined &&
+        (route.screen !== 'hire' || data.hires.some((hire) => hire.id === route.hireId))
   useEffect(() => {
-    if (viewer && isMainScreen && personExists && claimFirstVisit(viewer)) startTour()
-  }, [viewer, isMainScreen, personExists])
+    if (viewer && !hasOverlay && personExists && claimAutoOpen(viewer)) startTour()
+  }, [viewer, hasOverlay, personExists])
 
   // An Undo offer belongs to the person who acted, so it must not follow a switch to someone else.
   useEffect(() => {

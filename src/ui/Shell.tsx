@@ -73,7 +73,7 @@ export function Avatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md'
   )
 }
 
-type NavItem = { label: string; tour?: string; route: Route; icon: LucideIcon; active: (route: Route) => boolean }
+type NavItem = { label: string; route: Route; icon: LucideIcon; active: (route: Route) => boolean }
 
 function navItems(persona: Persona | null): NavItem[] {
   if (!persona) return []
@@ -120,7 +120,6 @@ function navItems(persona: Persona | null): NavItem[] {
     },
     {
       label: 'Insights',
-      tour: 'insights-nav',
       route: { screen: 'insights', leaderId, taskId: null },
       icon: Lightbulb,
       active: (route) => route.screen === 'insights',
@@ -145,7 +144,6 @@ function PrimaryNav({ persona, variant }: { persona: Persona | null; variant: 's
             <a
               key={item.label}
               href={hrefFor(item.route)}
-              data-tour={item.tour}
               aria-current={active ? 'page' : undefined}
               className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs font-medium transition-colors duration-100 ${
                 active ? 'text-accent-strong' : 'text-muted'
@@ -169,7 +167,6 @@ function PrimaryNav({ persona, variant }: { persona: Persona | null; variant: 's
           <a
             key={item.label}
             href={hrefFor(item.route)}
-            data-tour={item.tour}
             aria-current={active ? 'page' : undefined}
             className={`flex min-h-11 items-center gap-3 rounded-[10px] px-3 text-[15px] font-medium transition-colors duration-100 ${
               active
@@ -364,7 +361,7 @@ function PersonaMenu({ persona, variant }: { persona: Persona | null; variant: '
             <Menu.Item className={itemClass} onSelect={() => startTour()}>
               <span className="min-w-0">
                 <span className="block font-medium">Show me around</span>
-                <span className="block text-xs text-muted">A short tour of this person’s view</span>
+                <span className="block text-xs text-muted">A tour of this person’s view</span>
               </span>
               <Compass size={16} aria-hidden className="shrink-0 text-muted" />
             </Menu.Item>
@@ -548,6 +545,7 @@ export function Shell({
         <StoreNotice />
         <div className="mx-auto max-w-[1180px] px-4 pt-3 pb-24 lg:px-8 lg:pt-6 lg:pb-12">
           <header
+            data-tour="hero"
             className={`on-band hero relative overflow-hidden rounded-[20px] text-white ${
               compact ? 'p-4 lg:px-6 lg:py-5' : 'p-5 lg:p-7'
             }`}
