@@ -48,6 +48,18 @@ export type Nudge = {
   dismissed: boolean
 }
 
+export type HelpRequest = {
+  id: string
+  hireId: string
+  /** Null for a general question that is not about one task. */
+  taskId: string | null
+  toLeaderId: string
+  message: string
+  on: IsoDate
+  status: 'open' | 'resolved'
+  resolvedBy: string | null
+}
+
 export type AppData = {
   version: 1
   seededOn: IsoDate
@@ -55,6 +67,7 @@ export type AppData = {
   /** Keyed by `completionKey(hireId, taskId)`. */
   completions: Record<string, Completion>
   nudges: Nudge[]
+  helpRequests: HelpRequest[]
 }
 
 export type Persona = { kind: 'employee'; hire: Hire } | { kind: 'leader'; leader: Leader }

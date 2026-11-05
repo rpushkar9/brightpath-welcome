@@ -25,10 +25,10 @@ export const templatesFor = (department: Department): readonly TaskTemplate[] =>
 ]
 
 export const PHASES: readonly { id: PhaseId; label: string }[] = [
-  { id: 'before', label: 'Before day one' },
-  { id: 'first-day', label: 'First day' },
+  { id: 'before', label: 'Before your first day' },
+  { id: 'first-day', label: 'Day one' },
   { id: 'first-week', label: 'First week' },
-  { id: 'weeks-2-4', label: 'Weeks 2–4' },
+  { id: 'weeks-2-4', label: 'First month' },
 ]
 
 export function phaseOfDay(day: number): PhaseId {

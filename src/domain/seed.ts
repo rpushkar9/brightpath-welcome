@@ -1,7 +1,7 @@
 import { addBusinessDays, latestBusinessDay } from './dates'
 import { leaderById, managerIdFor } from './people'
 import { completionKey, templatesFor } from './plan'
-import type { AppData, Completion, Department, Hire, IsoDate, TaskTemplate } from './types'
+import type { AppData, Completion, Department, HelpRequest, Hire, IsoDate, TaskTemplate } from './types'
 
 type SeedPerson = {
   id: string
@@ -114,7 +114,21 @@ export function createSeed(today: IsoDate): AppData {
     return hire
   })
 
-  return { version: 1, seededOn, hires, completions, nudges: [] }
+  const helpRequests: HelpRequest[] = [
+    {
+      id: 'help-tomas-rivera-1',
+      hireId: 'tomas-rivera',
+      taskId: 's-crm',
+      toLeaderId: 'sarah',
+      message:
+        'I’m waiting on “Create CRM account” so I can start “Review CRM workflows”. Can you check on it?',
+      on: seededOn,
+      status: 'open',
+      resolvedBy: null,
+    },
+  ]
+
+  return { version: 1, seededOn, hires, completions, nudges: [], helpRequests }
 }
 
 export const DEFAULT_HIRE_ID = 'emily-carter'

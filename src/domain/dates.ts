@@ -64,6 +64,10 @@ export function businessDaysBetween(from: IsoDate, to: IsoDate): number {
   return count
 }
 
+/** The Friday of this week. On a weekend, the Friday of the coming week. */
+export const endOfWeek = (date: IsoDate): IsoDate =>
+  addCalendarDays(date, (5 - weekday(date) + 7) % 7)
+
 export const latestBusinessDay = (date: IsoDate): IsoDate => {
   let current = date
   while (isWeekend(current)) current = addCalendarDays(current, -1)

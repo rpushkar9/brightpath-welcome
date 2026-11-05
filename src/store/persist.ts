@@ -2,7 +2,8 @@ import { parseIsoDate } from '../domain/dates'
 import { managerIdFor } from '../domain/people'
 import { completionKey, templatesFor } from '../domain/plan'
 import { createSeed } from '../domain/seed'
-import type { AppData, Completion, Hire, IsoDate, Nudge } from '../domain/types'
+import { leaderById } from '../domain/people'
+import type { AppData, Completion, HelpRequest, Hire, IsoDate, Nudge } from '../domain/types'
 
 export const STORAGE_KEY = 'brightpath-welcome:v1'
 
@@ -51,6 +52,18 @@ function parseNudge(value: unknown): Nudge | null {
   return { hireId, taskId, fromName, on, dismissed }
 }
 
+function parseHelpRequest(value: unknown): HelpRequest | null {
+  if (!isRecord(value)) return null
+  const { id, hireId, taskId, toLeaderId, message, status, resolvedBy } = value
+  const on = dateOf(value.on)
+  if (typeof id !== 'string' || typeof hireId !== 'string' || !on) return null
+  if (taskId !== null && typeof taskId !== 'string') return null
+  if (typeof toLeaderId !== 'string' || !leaderById(toLeaderId)) return null
+  if (typeof message !== 'string' || (status !== 'open' && status !== 'resolved')) return null
+  if (resolvedBy !== null && typeof resolvedBy !== 'string') return null
+  return { id, hireId, taskId, toLeaderId, message, on, status, resolvedBy }
+}
+
 /** Accepts saved data only if every part is well formed and refers to something real. */
 export function parseAppData(value: unknown): AppData | null {
   if (!isRecord(value) || value.version !== 1) return null
@@ -84,7 +97,18 @@ export function parseAppData(value: unknown): AppData | null {
     nudges.push(nudge)
   }
 
-  return { version: 1, seededOn, hires, completions, nudges }
+  // Data saved before help requests existed simply has none yet.
+  const rawRequests = value.helpRequests === undefined ? [] : value.helpRequests
+  if (!Array.isArray(rawRequests)) return null
+  const helpRequests: HelpRequest[] = []
+  for (const raw of rawRequests) {
+    const request = parseHelpRequest(raw)
+    if (!request || !hires.some((hire) => hire.id === request.hireId)) return null
+    if (request.taskId && !validKeys.has(completionKey(request.hireId, request.taskId))) return null
+    helpRequests.push(request)
+  }
+
+  return { version: 1, seededOn, hires, completions, nudges, helpRequests }
 }
 
 export type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>

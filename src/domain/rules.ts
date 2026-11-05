@@ -1,3 +1,4 @@
+import { formatShort } from './dates'
 import { firstName, leaderById } from './people'
 import { buildPlan, completionKey, hireHealth, templatesFor } from './plan'
 import type {
@@ -10,6 +11,7 @@ import type {
   PlanTask,
   Result,
   TaskOwner,
+  TaskStatus,
 } from './types'
 
 const personaName = (persona: Persona): string =>
@@ -45,6 +47,25 @@ export function ownerName(owner: TaskOwner, hire: Hire): string {
       return 'IT'
     default: {
       const exhaustive: never = owner
+      return exhaustive
+    }
+  }
+}
+
+export function statusLabel(status: TaskStatus, hire: Hire): string {
+  switch (status.kind) {
+    case 'completed':
+      return `Done ${formatShort(status.on)}`
+    case 'upcoming':
+      return `Opens ${formatShort(status.opensOn)}`
+    case 'waiting':
+      return `Waiting on ${ownerName(status.onOwner, hire)}`
+    case 'overdue':
+      return `Was due ${formatShort(status.dueOn)}`
+    case 'outstanding':
+      return status.dueToday ? 'Due today' : `Due ${formatShort(status.dueOn)}`
+    default: {
+      const exhaustive: never = status
       return exhaustive
     }
   }

@@ -34,6 +34,7 @@ const data = (hires: Hire[], done: string[] = []): AppData => ({
     done.map((taskId) => [completionKey('h1', taskId), { on: start, byName: 'Test' }]),
   ),
   nudges: [],
+  helpRequests: [],
 })
 
 const find = (plan: PlanTask[], id: string): PlanTask => {

@@ -62,6 +62,20 @@ describe('loadData', () => {
     expect(parseAppData(JSON.parse(storage.value ?? 'null'))).toEqual(data)
   })
 
+  it('accepts data saved before help requests existed', () => {
+    const raw = withSeed((seed) => { delete seed.helpRequests })
+    const { data, notice } = loadData(memoryStorage(raw), today)
+    expect(notice).toBe('none')
+    expect(data.helpRequests).toEqual([])
+  })
+
+  it('restores sample data after a help request for nobody', () => {
+    const raw = withSeed((seed) => {
+      seed.helpRequests = [{ id: 'x', hireId: 'ghost', taskId: null, toLeaderId: 'sarah', message: 'Hi', on: '2026-11-04', status: 'open', resolvedBy: null }]
+    })
+    expect(loadData(memoryStorage(raw), today).notice).toBe('restored')
+  })
+
   it('works in memory when storage is not available', () => {
     const { data, notice } = loadData(null, today)
     expect(notice).toBe('unavailable')
