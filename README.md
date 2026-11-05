@@ -2,6 +2,8 @@
 
 BrightPath Welcome is a working onboarding prototype for BrightPath Technologies, a fictional company of about 150 employees. I built it for the MangoApps Associate Product Manager, AI Builder take-home (Scenario 1).
 
+**[Watch the demo video](https://youtu.be/XOYL2g4XAaM)** (under 5 minutes).
+
 Each person gets a clear answer to their own question:
 
 - **New hires:** what should I do next, and who can help me?
