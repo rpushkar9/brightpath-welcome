@@ -35,7 +35,7 @@ test.describe('insights', () => {
     await page.getByRole('link', { name: 'Create CRM account' }).click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Create CRM account')
     await expect(page.getByRole('heading', { name: 'Who’s affected' })).toBeVisible()
-    await page.getByRole('link', { name: /Tomás Rivera/ }).click()
+    await page.locator('main').getByRole('link', { name: /Tomás Rivera/ }).click()
     await expect(page).toHaveURL(/hire\/tomas-rivera\/task\/s-crm-account$/)
   })
 
@@ -123,7 +123,7 @@ test.describe('insights keep their place', () => {
     await expect(page.getByLabel('Department')).toHaveValue('sales')
     await page.getByLabel('Department').selectOption('all')
     await page.getByRole('link', { name: 'Create CRM account' }).click()
-    await page.getByRole('link', { name: 'Marcus Webb' }).click()
+    await page.locator('main').getByRole('link', { name: 'Marcus Webb' }).click()
     await expect(page.getByRole('dialog')).toContainText('Create CRM account')
     await page.keyboard.press('Escape')
     await page.getByRole('navigation', { name: 'Go back' }).getByRole('link', { name: 'Back to Insights' }).click()

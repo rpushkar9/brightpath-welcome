@@ -16,10 +16,13 @@ import {
 import { useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { hrefFor, markReturning, navigate, useRoute, type Route } from '../app/route'
-import { formatShort } from '../domain/dates'
-import { LEADERS } from '../domain/people'
-import type { Persona } from '../domain/types'
+import { formatShort, todayIso } from '../domain/dates'
+import { LEADERS, SARAH, leaderById } from '../domain/people'
+import { canView, rosterOrder } from '../domain/rules'
+import type { HealthKind, Hire, Leader, Persona } from '../domain/types'
 import { store, useStore } from '../store/store'
+import { HelpDialog } from './HelpDialog'
+import { HEALTH_LABEL } from './status'
 import { startTour } from './tourState'
 
 export const BAND_H1 =
@@ -180,6 +183,109 @@ function PrimaryNav({ persona, variant }: { persona: Persona | null; variant: 's
         )
       })}
     </nav>
+  )
+}
+
+const sideLabelClass = 'px-3 text-[13px] font-medium text-muted'
+
+/** The two people a new hire can always ask, which answers "who can help me?" on every page. */
+function YourPeople({ hire, persona }: { hire: Hire; persona: Persona }) {
+  const manager = leaderById(hire.managerId)
+  const person = (name: string, role: string, label: string, to?: Leader) => (
+    <li className="flex items-center gap-2.5 px-3 py-1.5">
+      <Avatar name={name} size="sm" />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{name}</span>
+        <span className="block truncate text-xs text-muted">{role}</span>
+      </span>
+      <HelpDialog
+        hire={hire}
+        persona={persona}
+        task={null}
+        to={to}
+        initialMessage=""
+        trigger={
+          <button
+            type="button"
+            aria-label={label}
+            className="min-h-8 shrink-0 cursor-pointer rounded-control px-1.5 text-sm font-semibold text-accent hover:bg-white/60 hover:text-accent-strong"
+          >
+            Ask
+          </button>
+        }
+      />
+    </li>
+  )
+  return (
+    <section data-tour="your-people" aria-labelledby="side-people">
+      <p id="side-people" className={sideLabelClass}>
+        Your people
+      </p>
+      <ul className="mt-1">
+        {manager && person(manager.name, 'Your manager', `Ask your manager, ${manager.name}`)}
+        {person(SARAH.name, 'HR and IT', `Ask HR, ${SARAH.name}`, SARAH)}
+      </ul>
+    </section>
+  )
+}
+
+const SIDE_HIRE_LIMIT = 6
+
+const HEALTH_DOT: Record<HealthKind, string> = {
+  'needs-attention': 'bg-overdue',
+  watch: 'bg-path-marker',
+  'on-track': 'bg-accent',
+  complete: 'bg-control',
+}
+
+/** Whoever needs the most help comes first, one click away from any page. */
+function SideHires({ persona, leader }: { persona: Persona; leader: Leader }) {
+  const { data } = useStore()
+  const current = useRoute()
+  const rows = rosterOrder(
+    data.hires.filter((hire) => canView(persona, hire)),
+    data,
+    todayIso(),
+  )
+  if (rows.length === 0) return null
+  const everyone: Route =
+    leader.kind === 'hr' ? { screen: 'people', leaderId: leader.id } : { screen: 'team', leaderId: leader.id }
+  return (
+    <section data-tour="side-hires" aria-labelledby="side-hires-label">
+      <p id="side-hires-label" className={sideLabelClass}>
+        New hires
+      </p>
+      <ul className="mt-1 space-y-0.5">
+        {rows.slice(0, SIDE_HIRE_LIMIT).map(({ hire, health }) => {
+          const active = current.screen === 'hire' && current.hireId === hire.id
+          return (
+            <li key={hire.id}>
+              <a
+                href={hrefFor({ screen: 'hire', leaderId: leader.id, hireId: hire.id, taskId: null })}
+                aria-current={active ? 'true' : undefined}
+                className={`block min-h-11 rounded-[10px] px-3 py-1 transition-colors duration-100 hover:bg-white/60 ${
+                  active ? 'bg-white/70' : ''
+                }`}
+              >
+                <span className="block truncate text-sm font-medium">{hire.name}</span>
+                <span className="flex items-center gap-1.5 text-xs text-muted">
+                  <span aria-hidden className={`size-1.5 rounded-full ${HEALTH_DOT[health.kind]}`} />
+                  {HEALTH_LABEL[health.kind]}
+                </span>
+              </a>
+            </li>
+          )
+        })}
+      </ul>
+      {rows.length > SIDE_HIRE_LIMIT && (
+        <a
+          href={hrefFor(everyone)}
+          className="mt-1 flex min-h-9 items-center px-3 text-sm font-semibold text-accent-strong underline underline-offset-2"
+        >
+          See all {rows.length}
+        </a>
+      )}
+    </section>
   )
 }
 
@@ -412,7 +518,16 @@ export function Shell({
           <Logo persona={persona} />
         </div>
         <PrimaryNav persona={persona} variant="side" />
-        <div className="mt-auto space-y-2">
+        {persona && (
+          <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
+            {persona.kind === 'employee' ? (
+              <YourPeople hire={persona.hire} persona={persona} />
+            ) : (
+              <SideHires persona={persona} leader={persona.leader} />
+            )}
+          </div>
+        )}
+        <div className="mt-auto shrink-0 space-y-2 pt-2">
           <button
             type="button"
             onClick={startTour}

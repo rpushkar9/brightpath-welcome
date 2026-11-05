@@ -162,3 +162,46 @@ test.describe('getting back', () => {
     })
   })
 })
+
+test.describe('sidebar', () => {
+  test('shows a new hire who can help, and asks the right person', async ({ page }) => {
+    await openApp(page)
+    const people = page.getByRole('region', { name: 'Your people' })
+    await expect(people).toContainText('David Park')
+    await expect(people).toContainText('Sarah Mitchell')
+    await people.getByRole('button', { name: 'Ask HR, Sarah Mitchell' }).click()
+    await expect(page.getByRole('dialog')).toContainText('It goes only to Sarah Mitchell in HR')
+  })
+
+  test('shows a manager only their own hires, most urgent first, with status in words', async ({ page }) => {
+    await openApp(page, '#/team/david')
+    const hires = page.getByRole('region', { name: 'New hires' }).getByRole('link')
+    await expect(hires).toHaveCount(3)
+    await expect(hires.first()).toContainText('Priya Nair')
+    await expect(hires.first()).toContainText('Needs attention')
+    await hires.first().click()
+    await expect(page).toHaveURL(/team\/david\/hire\/priya-nair$/)
+    await expect(hires.first()).toHaveAttribute('aria-current', 'true')
+  })
+
+  test('caps a long list and links to everyone', async ({ page }) => {
+    await openApp(page, '#/team/sarah/new')
+    const hires = page.getByRole('region', { name: 'New hires' })
+    await expect(hires.getByRole('link', { name: /See all/ })).toHaveCount(0)
+    await page.getByLabel('Full name').fill('Sam Okafor')
+    await page.getByLabel('Job title').fill('Analyst')
+    await page.getByRole('radio', { name: 'Sales' }).check()
+    await page.getByLabel('Start date').fill('2026-11-09')
+    await page.getByRole('button', { name: 'Start plan' }).click()
+    await hires.getByRole('link', { name: 'See all 7' }).click()
+    await expect(page).toHaveURL(/team\/sarah\/people$/)
+  })
+
+  test('long names fit, and it stays out of the way on a phone', async ({ page }) => {
+    await openApp(page, '#/team/sarah')
+    const name = page.getByRole('region', { name: 'New hires' }).getByText('Marcus Webb')
+    expect(await name.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expect(page.getByRole('region', { name: 'New hires' })).toBeHidden()
+  })
+})
