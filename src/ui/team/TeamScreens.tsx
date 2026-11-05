@@ -22,7 +22,7 @@ import type { HealthKind, Hire, IsoDate, Leader, Persona, PlanTask } from '../..
 import { openRequestsFor, resolveHelp } from '../../domain/help'
 import { store, useStore } from '../../store/store'
 import { PlanPhases } from '../PlanPhases'
-import { BAND_H1, BAND_H1_COMPACT, Shell } from '../Shell'
+import { BAND_H1, BAND_H1_COMPACT, BackAtEnd, Shell, type BackLink } from '../Shell'
 import { TaskDrawer } from '../TaskDrawer'
 import { openTask } from '../TaskRow'
 import { HealthChip, HEALTH_LABEL, statusLabel } from '../status'
@@ -711,16 +711,16 @@ export function HireDetail({
   const manager = leaderById(hire.managerId)
   const flagged = health.kind === 'needs-attention' || health.kind === 'watch'
   const parent: Route = { screen: 'hire', leaderId: leader.id, hireId: hire.id, taskId: null }
+  const back: BackLink = {
+    label: leader.kind === 'hr' ? 'Back to all new hires' : 'Back to your team',
+    route: { screen: 'team', leaderId: leader.id },
+  }
 
   return (
     <Shell
       persona={persona}
       compact
-      back={{
-        label: leader.kind === 'hr' ? 'Back to all new hires' : 'Back to your team',
-        route: { screen: 'team', leaderId: leader.id },
-        current: hire.name,
-      }}
+      back={back}
       band={
         <>
           <h1 className={BAND_H1_COMPACT}>{hire.name}</h1>
@@ -766,6 +766,7 @@ export function HireDetail({
         currentLabel="Now"
         taskRoute={(id) => ({ screen: 'hire', leaderId: leader.id, hireId: hire.id, taskId: id })}
       />
+      <BackAtEnd back={back} />
       <TaskDrawer taskId={taskId} plan={plan} hire={hire} persona={persona} parent={parent} />
     </Shell>
   )

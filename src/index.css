@@ -43,8 +43,6 @@
 /* In the base layer, or these rules would override every Tailwind utility. */
 @layer base {
   html {
-    /* Keeps focused controls clear of the pinned back bar. */
-    scroll-padding-top: 72px;
     background: var(--color-canvas);
     color: var(--color-ink);
     font-family: var(--font-sans);

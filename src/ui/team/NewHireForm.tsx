@@ -125,7 +125,7 @@ export function NewHireForm({ leader, today }: { leader: Leader; today: IsoDate 
     <Shell
       persona={persona}
       compact
-      back={{ label: 'Back to all new hires', route: teamRoute, current: 'New plan' }}
+      back={{ label: 'Back to all new hires', route: teamRoute }}
       band={
         <>
           <h1 className={BAND_H1_COMPACT}>Start a new plan</h1>

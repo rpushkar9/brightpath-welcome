@@ -210,26 +210,35 @@ function Contours() {
   )
 }
 
-export type BackLink = { label: string; route: Route; current: string }
+export type BackLink = { label: string; route: Route }
 
-/** Pinned and on white, so the way back stands out and stays visible while scrolling. */
-function BackBar({ back }: { back: BackLink }) {
+/** Solid white on the dark header, at the left above the title, so it cannot blend in. */
+function BackButton({ back }: { back: BackLink }) {
   return (
-    <nav aria-label="Go back" className="sticky top-0 z-30 border-b border-hairline bg-surface">
-      <div className="mx-auto flex max-w-[1120px] items-center gap-3 px-4 py-2 sm:px-8">
-        <a
-          href={hrefFor(back.route)}
-          onClick={markReturning}
-          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control border border-control px-3 text-sm font-semibold text-ink transition-colors duration-100 hover:border-accent hover:bg-accent-tint hover:text-accent-strong"
-        >
-          <ArrowLeft size={18} aria-hidden />
-          {back.label}
-        </a>
-        <span className="min-w-0 truncate text-sm text-muted" aria-current="page">
-          {back.current}
-        </span>
-      </div>
+    <nav aria-label="Go back" className="mb-3">
+      <a
+        href={hrefFor(back.route)}
+        onClick={markReturning}
+        className="inline-flex min-h-11 items-center gap-2 rounded-control bg-white px-3.5 text-sm font-semibold text-band transition-colors duration-100 hover:bg-band-soft"
+      >
+        <ArrowLeft size={18} aria-hidden />
+        {back.label}
+      </a>
     </nav>
+  )
+}
+
+/** A second way back at the end of a long page. */
+export function BackAtEnd({ back }: { back: BackLink }) {
+  return (
+    <a
+      href={hrefFor(back.route)}
+      onClick={markReturning}
+      className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-control border border-control px-3.5 text-sm font-semibold transition-colors duration-100 hover:border-accent hover:bg-accent-tint hover:text-accent-strong"
+    >
+      <ArrowLeft size={18} aria-hidden />
+      {back.label}
+    </a>
   )
 }
 
@@ -250,7 +259,6 @@ export function Shell({
   return (
     <div className="min-h-dvh">
       <StoreNotice />
-      {back && <BackBar back={back} />}
       <header className="on-band relative overflow-hidden bg-band text-white">
         <Contours />
         <div className="relative mx-auto max-w-[1120px] px-4 sm:px-8">
@@ -268,7 +276,10 @@ export function Shell({
               <PersonaMenu persona={persona} />
             </div>
           </div>
-          <div className={compact ? 'pb-4 sm:pb-5' : 'pt-3 pb-5 sm:pt-7 sm:pb-7'}>{band}</div>
+          <div className={compact ? 'pt-1 pb-4 sm:pb-5' : 'pt-3 pb-5 sm:pt-7 sm:pb-7'}>
+            {back && <BackButton back={back} />}
+            {band}
+          </div>
         </div>
       </header>
       <main tabIndex={-1} className="mx-auto max-w-[1120px] px-4 py-5 focus:outline-none sm:px-8 sm:py-8">{children}</main>

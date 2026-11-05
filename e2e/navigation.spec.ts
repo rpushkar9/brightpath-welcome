@@ -24,17 +24,32 @@ test.describe('getting back', () => {
     await expect(page.getByRole('navigation', { name: 'Go back' })).toHaveCount(0)
   })
 
-  test('the back button stays on screen while scrolling, and names where you are', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 500 })
+  test('the back button sits at the left above the title, and stands out', async ({ page }) => {
     await openApp(page, '#/team/david/hire/priya-nair')
-    const bar = page.getByRole('navigation', { name: 'Go back' })
-    await expect(bar).toContainText('Priya Nair')
+    const button = back(page, 'Back to your team')
+    await expect(button).toBeInViewport({ ratio: 1 })
+    await expect(button).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+    const a = await button.boundingBox()
+    const title = await page.getByRole('heading', { level: 1 }).boundingBox()
+    expect(a && title && Math.abs(a.x - title.x)).toBeLessThan(2)
+    expect(a && title && a.y + a.height <= title.y).toBe(true)
+    // It belongs to the page, so it scrolls away instead of being pinned to the screen.
+    await page.setViewportSize({ width: 1280, height: 500 })
     await page.evaluate(() => window.scrollTo(0, 500))
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100)
-    await expect(back(page, 'Back to your team')).toBeInViewport({ ratio: 1 })
+    await expect(button).not.toBeInViewport()
   })
 
-  test('the back bar passes an accessibility scan', async ({ page }) => {
+  test('long pages have another way back at the end', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 500 })
+    await openApp(page, '#/team/david/hire/priya-nair')
+    const atEnd = page.locator('main').getByRole('link', { name: 'Back to your team' })
+    await atEnd.scrollIntoViewIfNeeded()
+    await expect(atEnd).toBeInViewport()
+    await atEnd.click()
+    await expect(page).toHaveURL(/team\/david$/)
+  })
+
+  test('the back button passes an accessibility scan', async ({ page }) => {
     await openApp(page, '#/team/david/hire/priya-nair')
     await page.waitForTimeout(400)
     const { violations } = await new AxeBuilder({ page })
@@ -93,7 +108,7 @@ test.describe('getting back', () => {
   test.describe('on a phone', () => {
     test.use({ viewport: { width: 360, height: 740 } })
 
-    test('the bar fits, with a long name', async ({ page }) => {
+    test('the button fits, with a long name', async ({ page }) => {
       await openApp(page, '#/team/sarah/new')
       await page.getByLabel('Full name').fill('Wolfeschlegelsteinhausenbergerdorff Mackenzie-Abernathy')
       await page.getByLabel('Job title').fill('Engineer')

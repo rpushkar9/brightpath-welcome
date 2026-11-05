@@ -8,7 +8,7 @@ import { dismissNudge, ownerName } from '../../domain/rules'
 import type { Hire, IsoDate, Persona, PlanTask, Stage } from '../../domain/types'
 import { store, useStore } from '../../store/store'
 import { PlanPhases } from '../PlanPhases'
-import { BAND_H1, BAND_H1_COMPACT, Shell } from '../Shell'
+import { BAND_H1, BAND_H1_COMPACT, BackAtEnd, Shell, type BackLink } from '../Shell'
 import { NeedHelp } from '../NeedHelp'
 import { TaskDrawer } from '../TaskDrawer'
 import { TaskRow, openTask } from '../TaskRow'
@@ -467,16 +467,16 @@ export function EmployeePlan({
   const { total } = progress(plan)
   const company = plan.filter((task) => task.template.scope === 'company').length
   const parent: Route = { screen: 'plan', hireId: hire.id, taskId: null }
+  const back: BackLink = {
+    label: 'Back to my next steps',
+    route: { screen: 'home', hireId: hire.id, taskId: null },
+  }
 
   return (
     <Shell
       persona={persona}
       compact
-      back={{
-        label: 'Back to my next steps',
-        route: { screen: 'home', hireId: hire.id, taskId: null },
-        current: 'Your full plan',
-      }}
+      back={back}
       band={
         <>
           <h1 className={BAND_H1_COMPACT}>Your full plan</h1>
@@ -493,6 +493,7 @@ export function EmployeePlan({
         stage={stage}
         taskRoute={(id) => ({ screen: 'plan', hireId: hire.id, taskId: id })}
       />
+      <BackAtEnd back={back} />
       <TaskDrawer taskId={taskId} plan={plan} hire={hire} persona={persona} parent={parent} />
     </Shell>
   )
