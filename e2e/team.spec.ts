@@ -56,7 +56,7 @@ test.describe('manager view', () => {
     await expect(page.getByRole('dialog').getByRole('button', { name: 'Mark complete' })).toHaveCount(0)
   })
 
-  test('what changed shows real activity from another window, then clears on the next visit', async ({ context }) => {
+  test('what changed shows real activity, survives moving around, and clears on the next visit', async ({ context }) => {
     const david = await context.newPage()
     const emily = await context.newPage()
     await openApp(david, '#/team/david')
@@ -64,12 +64,38 @@ test.describe('manager view', () => {
     await expect(changed).toContainText('Nothing new')
     await openApp(emily)
     await emily.getByRole('button', { name: 'Mark complete' }).click()
-    await expect(changed).toContainText('Emily completed “Set up your laptop and sign in”')
+    const item = 'Emily completed “Set up your laptop and sign in”'
+    await expect(changed).toContainText(item)
+
+    // Opening someone and coming back, or refreshing, is still the same visit.
+    await david.locator('table').getByRole('link', { name: 'Priya Nair' }).click()
+    await david.getByRole('navigation', { name: 'Go back' }).getByRole('link').click()
+    await expect(changed).toContainText(item)
+    await david.reload()
+    await expect(changed).toContainText(item)
+
+    // A new session is a new visit.
+    const later = await context.newPage()
+    await openApp(later, '#/team/david')
+    const again = later.getByRole('heading', { name: 'What changed since your last visit' }).locator('..')
+    await expect(again).toContainText('Nothing new')
+  })
+
+  test('a question sent to HR does not appear for the manager', async ({ context }) => {
+    const david = await context.newPage()
+    const emily = await context.newPage()
+    await openApp(david, '#/team/david')
+    const changed = david.getByRole('heading', { name: 'What changed since your last visit' }).locator('..')
+    await openApp(emily)
+    await emily.getByRole('button', { name: 'Ask Sarah in HR' }).click()
+    await emily.getByLabel('Your message').fill('A private question')
+    await emily.getByRole('button', { name: 'Send request' }).click()
+    await expect(emily.getByText('A private question')).toBeVisible()
     await david.reload()
     await expect(changed).toContainText('Nothing new')
-    await emily.getByRole('button', { name: 'Undo', exact: true }).click()
-    await expect(emily.locator('header')).toContainText('Whole plan: 6 of 18')
-    await expect(changed).toContainText('Emily')
+    await expect(david.locator('main')).not.toContainText('Help requests')
+    await david.goto('/#/team/sarah')
+    await expect(david.locator('main')).toContainText('A private question')
   })
 
   test('the filter narrows the roster and explains an empty result', async ({ page }) => {

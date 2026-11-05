@@ -118,13 +118,14 @@ export const pageKeyOf = (route: Route): string =>
       : route,
   )
 
-let hrArea: 'overview' | 'people' = 'people'
+export type HrArea = 'overview' | 'people' | 'insights'
+let hrArea: HrArea = 'people'
 
 /** Remembers where HR opened a person from, so the Back button can return there. */
-export const rememberHrArea = (area: 'overview' | 'people'): void => {
+export const rememberHrArea = (area: HrArea): void => {
   hrArea = area
 }
-export const currentHrArea = (): 'overview' | 'people' => hrArea
+export const currentHrArea = (): HrArea => hrArea
 
 let returning = false
 

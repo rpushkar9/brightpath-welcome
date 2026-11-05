@@ -105,3 +105,28 @@ test.describe('insights with little or no data', () => {
     await expect(page.getByText('Improvement proposed')).toBeVisible()
   })
 })
+
+test.describe('insights keep their place', () => {
+  test('the summary describes every task, even when a filter hides them', async ({ page }) => {
+    await openApp(page, '#/team/sarah/insights')
+    await expect(page.getByText('3 tasks affect more than one hire.')).toBeVisible()
+    await page.getByLabel('Owner').selectOption('hr')
+    await expect(page.getByText('3 tasks affect more than one hire.')).toBeVisible()
+    await expect(page.getByText('No tasks match these filters.')).toBeVisible()
+  })
+
+  test('filters survive opening a task, and a hire returns to Insights', async ({ page }) => {
+    await openApp(page, '#/team/sarah/insights')
+    await page.getByLabel('Department').selectOption('sales')
+    await page.getByRole('link', { name: 'Create CRM account' }).click()
+    await page.getByRole('navigation', { name: 'Go back' }).getByRole('link').click()
+    await expect(page.getByLabel('Department')).toHaveValue('sales')
+    await page.getByLabel('Department').selectOption('all')
+    await page.getByRole('link', { name: 'Create CRM account' }).click()
+    await page.getByRole('link', { name: 'Marcus Webb' }).click()
+    await expect(page.getByRole('dialog')).toContainText('Create CRM account')
+    await page.keyboard.press('Escape')
+    await page.getByRole('navigation', { name: 'Go back' }).getByRole('link', { name: 'Back to Insights' }).click()
+    await expect(page).toHaveURL(/team\/sarah\/insights$/)
+  })
+})

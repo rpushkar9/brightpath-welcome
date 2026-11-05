@@ -266,8 +266,12 @@ function prerequisiteLate(plan: PlanTask[], task: PlanTask): string {
 }
 
 function Waiting({ plan, hire, persona }: { plan: PlanTask[]; hire: Hire; persona: Persona }) {
+  // A task waiting on the person's own earlier task is not waiting on someone else.
   const waiting = plan.filter(
-    (task) => task.template.owner === 'employee' && task.status.kind === 'waiting',
+    (task) =>
+      task.template.owner === 'employee' &&
+      task.status.kind === 'waiting' &&
+      task.status.onOwner !== 'employee',
   )
   if (waiting.length === 0) return null
   return (

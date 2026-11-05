@@ -7,8 +7,12 @@ import { firstName } from '../domain/people'
 import type { Hire, Leader, Persona, PlanTask } from '../domain/types'
 import { store } from '../store/store'
 
-function whyThisPerson(task: PlanTask | null, recipientName: string): string {
-  if (!task) return `${recipientName} is your best first stop.`
+function whyThisPerson(task: PlanTask | null, recipientName: string, isDirect: boolean): string {
+  if (!task) {
+    return isDirect
+      ? `It goes only to ${recipientName} in HR.`
+      : `${recipientName} is your best first stop. It goes only to them.`
+  }
   if (task.status.kind === 'waiting') {
     return `It goes to ${recipientName}, who can follow up on “${task.status.onTitle}”.`
   }
@@ -59,7 +63,7 @@ function HelpForm({
     >
       <Dialog.Title className="font-display text-xl font-semibold">Ask {first}</Dialog.Title>
       <Dialog.Description className="mt-1.5 text-[15px] leading-relaxed text-muted">
-        {whyThisPerson(task, recipient.name)}
+        {whyThisPerson(task, recipient.name, to !== undefined)}
       </Dialog.Description>
       <label htmlFor="help-message" className="mt-4 block text-sm font-semibold">
         Your message

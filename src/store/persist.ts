@@ -86,12 +86,13 @@ const isEventKind = (value: unknown): value is ActivityEvent['kind'] =>
 
 function parseEvent(value: unknown): ActivityEvent | null {
   if (!isRecord(value)) return null
-  const { seq, kind, hireId, taskId, actor } = value
+  const { seq, kind, hireId, taskId, actor, audience } = value
   const on = dateOf(value.on)
   if (typeof seq !== 'number' || !Number.isInteger(seq) || !on || !isEventKind(kind)) return null
   if (typeof hireId !== 'string' || typeof actor !== 'string') return null
   if (taskId !== null && typeof taskId !== 'string') return null
-  return { seq, on, kind, hireId, taskId, actor }
+  if (audience !== undefined && typeof audience !== 'string') return null
+  return { seq, on, kind, hireId, taskId, actor, ...(audience === undefined ? {} : { audience }) }
 }
 
 function parseImprovement(value: unknown): Improvement | null {

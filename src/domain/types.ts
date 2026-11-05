@@ -74,6 +74,8 @@ export type ActivityEvent = {
   hireId: string
   taskId: string | null
   actor: string
+  /** Only this leader may see it. A general question goes to one person, and is not for others. */
+  audience?: string
 }
 
 export type ImprovementStatus = 'proposed' | 'under-review' | 'addressed'

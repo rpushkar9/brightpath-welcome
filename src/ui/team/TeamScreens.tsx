@@ -139,17 +139,42 @@ function HealthStrip({ rows }: { rows: RosterRow[] }) {
   )
 }
 
+const ACTIVITY_LIMIT = 5
+const visitStarts = new Map<string, number>()
+
+/**
+ * Where this visit began. It lasts for the tab's session, so opening someone and coming back,
+ * or refreshing, does not clear what is new. A new session is a new visit.
+ */
+function visitStart(leaderId: string, seen: number): number {
+  const key = `brightpath-welcome:visit:${leaderId}`
+  try {
+    const stored = window.sessionStorage.getItem(key)
+    if (stored !== null) return Number(stored) || 0
+    window.sessionStorage.setItem(key, String(seen))
+    return seen
+  } catch {
+    const known = visitStarts.get(leaderId)
+    if (known !== undefined) return known
+    visitStarts.set(leaderId, seen)
+    return seen
+  }
+}
+
 /** New items since the last visit. They stay listed until the next visit. */
 function WhatChanged({ leader }: { leader: Leader }) {
   const { data } = useStore()
-  const [baseline] = useState(() => data.seenThrough[leader.id] ?? 0)
   const newest = latestSeq(data)
+  const [startOfVisit] = useState(() => visitStart(leader.id, data.seenThrough[leader.id] ?? 0))
+  // A demo reset restarts the log, so an older point cannot hide what comes next.
+  const baseline = startOfVisit > newest ? 0 : startOfVisit
   useEffect(() => {
     if ((store.getSnapshot().data.seenThrough[leader.id] ?? 0) !== newest) {
       store.update((current) => markSeen(current, leader.id))
     }
   }, [leader.id, newest])
-  const items = activitySince(data, leader, baseline).slice(0, 5)
+  const all = activitySince(data, leader, baseline)
+  const items = all.slice(0, ACTIVITY_LIMIT)
   return (
     <section data-tour="what-changed" className="glass rounded-card p-4">
       <h2 className="text-lg font-semibold">What changed since your last visit</h2>
@@ -163,6 +188,9 @@ function WhatChanged({ leader }: { leader: Leader }) {
               {text}
             </li>
           ))}
+          {all.length > ACTIVITY_LIMIT && (
+            <li className="text-[13px] text-muted">And {all.length - ACTIVITY_LIMIT} earlier</li>
+          )}
         </ul>
       )}
     </section>
@@ -259,13 +287,13 @@ export function TeamView({ leader, today }: { leader: Leader; today: IsoDate }) 
           <div className="min-w-0">
             <AttentionSection rows={rows} persona={persona} leader={leader} today={today} />
             {/* On phones, requests come before task lists, because someone is waiting on an answer. */}
-            <div className="mb-6 lg:hidden">
+            <div className="mb-6 empty:hidden lg:hidden">
               <HelpRequests leader={leader} persona={persona} today={today} />
             </div>
             <NextActions persona={persona} leader={leader} today={today} />
           </div>
           <div className="min-w-0 space-y-4">
-            <div className="hidden lg:block">
+            <div className="hidden empty:hidden lg:block">
               <HelpRequests leader={leader} persona={persona} today={today} />
             </div>
             {isHr ? (
@@ -436,7 +464,7 @@ function Roster({ rows, leader, today }: { rows: RosterRow[]; leader: Leader; to
         </div>
       ) : (
         <>
-          <div className="glass hidden overflow-hidden rounded-card sm:block">
+          <div className="glass hidden overflow-hidden rounded-card md:block">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-hairline text-[13px] text-muted">
                 <tr>
@@ -485,7 +513,7 @@ function Roster({ rows, leader, today }: { rows: RosterRow[]; leader: Leader; to
             </table>
           </div>
 
-          <ul className="glass divide-y divide-hairline overflow-hidden rounded-card sm:hidden">
+          <ul className="glass divide-y divide-hairline overflow-hidden rounded-card md:hidden">
             {shown.map((row) => (
               <li key={row.hire.id} className="relative px-4 py-3">
                 <div className="flex items-start gap-3">
@@ -970,7 +998,9 @@ export function HireDetail({
       ? { label: 'Back to your team', route: { screen: 'team', leaderId: leader.id } }
       : currentHrArea() === 'overview'
         ? { label: 'Back to Overview', route: { screen: 'team', leaderId: leader.id } }
-        : { label: 'Back to People', route: { screen: 'people', leaderId: leader.id } }
+        : currentHrArea() === 'insights'
+          ? { label: 'Back to Insights', route: { screen: 'insights', leaderId: leader.id, taskId: null } }
+          : { label: 'Back to People', route: { screen: 'people', leaderId: leader.id } }
 
   return (
     <Shell

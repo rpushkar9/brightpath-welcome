@@ -64,7 +64,7 @@ describe('task insights', () => {
     expect(insight(data, 'c-benefits').requesters).toHaveLength(1)
   })
 
-  it('drops a task once its friction is gone, and uses the same overdue rule as the plan', () => {
+  it('moves a task from overdue to finished late once it is done, using the plan’s overdue rule', () => {
     const data = mustOk(completeTask(seed(), hr, 'tomas-rivera', 's-crm-account', today))
     const crm = insight(data, 's-crm-account')
     expect(crm.overdueNow).toEqual([])
@@ -92,7 +92,9 @@ describe('task insights', () => {
 describe('suggestions and limits', () => {
   it('frames suggestions as things to review, based on the kind of problem', () => {
     expect(suggestionFor(insight(seed(), 's-crm-account'))).toContain('before the first day')
-    expect(suggestionFor(insight(seed(), 's-crm'))).toContain('clearer instructions')
+    const dependent = suggestionFor(insight(seed(), 's-crm'))
+    expect(dependent).toContain('depends on “Create CRM account”, so check that first')
+    expect(dependent).toContain('clearer instructions')
   })
 
   it('does not suggest moving a legal deadline', () => {

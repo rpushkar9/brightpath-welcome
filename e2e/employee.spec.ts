@@ -227,6 +227,14 @@ test.describe('honest progress and wording', () => {
     await expect(page.locator('main')).not.toContainText('open now')
   })
 
+  test('a late IT task says it is late, and that it is not the new hire’s doing', async ({ page }) => {
+    await openApp(page, '#/me/tomas-rivera/task/s-crm')
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toContainText('IT is late on this, not you.')
+    await expect(dialog.getByRole('heading', { name: 'Once access is ready' })).toBeVisible()
+    await expect(dialog.getByRole('heading', { name: 'What to do' })).toHaveCount(0)
+  })
+
   test('does not claim IT is working on something', async ({ page }) => {
     await openApp(page)
     await expect(page.getByText('Waiting for IT to finish “Grant repository access”.')).toBeVisible()

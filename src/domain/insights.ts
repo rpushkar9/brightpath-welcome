@@ -115,7 +115,10 @@ export function suggestionFor(insight: TaskInsight): string {
     return `Review the deadline and owner of ${title}, because other tasks wait on it.`
   }
   if (requests.length > 0) {
-    return `Consider clearer instructions for ${title}, and naming who to ask.`
+    const prerequisite = template.requires ? taskTemplateById(template.requires) : undefined
+    return prerequisite
+      ? `${title} depends on “${prerequisite.title}”, so check that first. Then consider clearer instructions, and naming who to ask.`
+      : `Consider clearer instructions for ${title}, and naming who to ask.`
   }
   return `Review whether the due date for ${title} is realistic.`
 }

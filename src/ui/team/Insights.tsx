@@ -1,7 +1,7 @@
 import { ChevronRight } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { hrefFor, type Route } from '../../app/route'
+import { hrefFor, type Route, rememberHrArea } from '../../app/route'
 import { formatShort } from '../../domain/dates'
 import {
   IMPROVEMENT_STATUS_LABEL,
@@ -160,11 +160,23 @@ function InsightRow({ insight, leader }: { insight: TaskInsight; leader: Leader 
   )
 }
 
+// Filters survive opening a task and coming back.
+const savedFilters: { scope: TaskScope | 'all'; owner: TaskOwner | 'all' } = { scope: 'all', owner: 'all' }
+
 function ListScreen({ leader, today }: { leader: Leader; today: IsoDate }) {
   const { data } = useStore()
   const persona: Persona = { kind: 'leader', leader }
-  const [scope, setScope] = useState<TaskScope | 'all'>('all')
-  const [owner, setOwner] = useState<TaskOwner | 'all'>('all')
+  const [scope, setScopeState] = useState<TaskScope | 'all'>(savedFilters.scope)
+  const [owner, setOwnerState] = useState<TaskOwner | 'all'>(savedFilters.owner)
+  const setScope = (next: TaskScope | 'all') => {
+    savedFilters.scope = next
+    setScopeState(next)
+  }
+  const setOwner = (next: TaskOwner | 'all') => {
+    savedFilters.owner = next
+    setOwnerState(next)
+  }
+  useEffect(() => rememberHrArea('insights'), [])
 
   const all = taskInsights(data, today)
   const shown = all.filter(
@@ -173,6 +185,7 @@ function ListScreen({ leader, today }: { leader: Leader; today: IsoDate }) {
   const hires = data.hires.length
   const affectedIds = new Set(all.flatMap((item) => item.affected.map((hire) => hire.id)))
   const shares = ownerShares(all)
+  const recurringTotal = all.filter((item) => item.affected.length > 1).length
   const recurring = shown.filter((item) => item.affected.length > 1)
   const oneOff = shown.filter((item) => item.affected.length <= 1)
   const queue = (
@@ -304,7 +317,7 @@ function ListScreen({ leader, today }: { leader: Leader; today: IsoDate }) {
           <div className="min-w-0 space-y-4">
             <section aria-label="Summary" className={`${panel} space-y-2 text-[15px]`}>
               <p className="text-lg leading-snug font-semibold">
-                {plural(recurring.length, 'task affects', 'tasks affect')} more than one hire.
+                {plural(recurringTotal, 'task affects', 'tasks affect')} more than one hire.
               </p>
               <p>
                 In total, {plural(all.length, 'task shows', 'tasks show')} friction, affecting {affectedIds.size} of{' '}

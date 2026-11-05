@@ -232,6 +232,24 @@ test.describe('tour, replayed from the button', () => {
     await expect(page).toHaveURL(/me\/marcus-webb$/)
   })
 
+  test('Escape still closes it after clicking the card', async ({ page }) => {
+    await openApp(page)
+    await start(page)
+    await card(page).getByRole('heading').click()
+    await page.keyboard.press('Escape')
+    await expect(card(page)).toHaveCount(0)
+  })
+
+  test('replaying it does not change where HR’s Back button goes', async ({ page }) => {
+    await openApp(page, '#/team/sarah/people')
+    await page.locator('table').getByRole('link', { name: 'Marcus Webb' }).click()
+    await start(page)
+    await expect(card(page)).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page).toHaveURL(/hire\/marcus-webb$/)
+    await expect(page.getByRole('navigation', { name: 'Go back' }).getByRole('link')).toHaveText('Back to People')
+  })
+
   test('has no accessibility violations', async ({ page }) => {
     await openApp(page)
     await start(page)
@@ -249,6 +267,12 @@ test.describe('tour, replayed from the button', () => {
       await page.getByRole('button', { name: /Emily Carter/ }).click()
       await page.getByRole('menuitem', { name: /Show me around/ }).click()
       await checkEveryStep(page, EMILY_STEPS)
+      await page.getByRole('button', { name: 'Finish' }).click()
+      // On a phone, the card must not cover the tab it describes.
+      await page.goto('/#/team/sarah')
+      await page.getByRole('button', { name: /Sarah Mitchell/ }).click()
+      await page.getByRole('menuitem', { name: /Show me around/ }).click()
+      await checkEveryStep(page, SARAH_STEPS, { noOverlap: true })
       const overflows = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
       expect(overflows).toBe(false)
     })

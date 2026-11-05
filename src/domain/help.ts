@@ -79,7 +79,14 @@ export function requestHelp(
     ok: true,
     data: recordEvent(
       { ...data, helpRequests: [...data.helpRequests, request] },
-      { kind: 'help-requested', on: today, hireId: hire.id, taskId, actor: hire.name },
+      {
+        kind: 'help-requested',
+        on: today,
+        hireId: hire.id,
+        taskId,
+        actor: hire.name,
+        ...(taskId ? {} : { audience: request.toLeaderId }),
+      },
     ),
   }
 }
@@ -111,6 +118,7 @@ export function resolveHelp(
         hireId: request.hireId,
         taskId: request.taskId,
         actor: persona.leader.name,
+        ...(request.taskId ? {} : { audience: request.toLeaderId }),
       },
     ),
   }

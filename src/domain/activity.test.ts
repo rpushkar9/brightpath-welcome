@@ -60,6 +60,16 @@ describe('activity', () => {
     expect(activitySince(second, DAVID, second.seenThrough.david ?? 0)).toHaveLength(1)
   })
 
+  it('keeps a general question private to the person it was sent to', () => {
+    const start = createSeed(today)
+    const asked = mustOk(requestHelp(start, asEmily(start), null, 'A private question', today, SARAH))
+    expect(activitySince(asked, DAVID, 0)).toEqual([])
+    expect(activitySince(asked, SARAH, 0).map((item) => item.text)).toEqual(['Emily asked a question'])
+    const id = asked.helpRequests.at(-1)?.id ?? ''
+    const resolved = mustOk(resolveHelp(asked, asSarah, id, today))
+    expect(activitySince(resolved, DAVID, 0)).toEqual([])
+  })
+
   it('records when a request is resolved', () => {
     const data = mustOk(resolveHelp(createSeed(today), asSarah, 'help-tomas-rivera-1', today))
     expect(activitySince(data, RENEE, 0).map((item) => item.text)).toEqual([

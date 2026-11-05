@@ -59,7 +59,12 @@ function withoutCancelled(events: ActivityEvent[]): ActivityEvent[] {
 /** What other people did on this leader's team after the given point. Newest first. */
 export function activitySince(data: AppData, leader: Leader, afterSeq: number): ActivityItem[] {
   const persona: Persona = { kind: 'leader', leader }
-  const recent = data.events.filter((event) => event.seq > afterSeq && event.actor !== leader.name)
+  const recent = data.events.filter(
+    (event) =>
+      event.seq > afterSeq &&
+      event.actor !== leader.name &&
+      (event.audience === undefined || event.audience === leader.id),
+  )
   return withoutCancelled(recent)
     .flatMap((event) => {
       const hire = data.hires.find((item) => item.id === event.hireId)

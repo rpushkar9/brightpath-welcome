@@ -36,7 +36,7 @@ const PEOPLE: readonly SeedPerson[] = [
     department: 'engineering',
     dayOffset: 11,
     isDone: dueBy(11, ['c-benefits', 'e-first-pr']),
-    finishedLate: { 'e-repo-grant': 2 },
+    finishedLate: { 'e-repo-grant': 1 },
   },
   {
     id: 'jordan-lee',

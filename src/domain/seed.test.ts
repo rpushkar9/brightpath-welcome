@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { iso } from './dates'
-import { buildPlan, hireHealth, nextSteps, progress, stageOf } from './plan'
+import { buildPlan, completionKey, hireHealth, nextSteps, progress, stageOf, templatesFor } from './plan'
 import { createSeed } from './seed'
 import type { AppData, Hire } from './types'
 
@@ -79,6 +79,25 @@ describe('seed created on a weekend', () => {
     expect(emily.stage).toBe('first-week')
     expect(emily.health).toBe('on-track')
   })
+})
+
+describe('seed history', () => {
+  it.each(['2026-11-04', '2026-11-02', '2026-11-06', '2026-11-07'])(
+    'never finishes a task before its prerequisite, seeded on %s',
+    (date) => {
+      const data = createSeed(iso(date))
+      for (const hire of data.hires) {
+        for (const task of templatesFor(hire.department)) {
+          const done = data.completions[completionKey(hire.id, task.id)]
+          const before = task.requires ? data.completions[completionKey(hire.id, task.requires)] : undefined
+          if (done && task.requires) {
+            expect(before, `${hire.id} ${task.id} needs its prerequisite done`).toBeDefined()
+            if (before) expect(before.on <= done.on, `${hire.id} ${task.id}`).toBe(true)
+          }
+        }
+      }
+    },
+  )
 })
 
 describe('seed dates', () => {

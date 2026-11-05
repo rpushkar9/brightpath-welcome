@@ -42,8 +42,10 @@ function NotAvailableNote({
       <p className="text-sm text-waiting">
         {prerequisite?.status.kind === 'overdue' && (
           <span className="mb-1 block font-medium">
-            {ownerName(status.onOwner, hire)} is late on this, not you. It was due{' '}
-            {formatShort(prerequisite.status.dueOn)}.
+            {persona.kind === 'employee' && status.onOwner !== 'employee'
+              ? `${ownerName(status.onOwner, hire)} is late on this, not you. `
+              : ''}
+            It was due {formatShort(prerequisite.status.dueOn)}.
           </span>
         )}
         Waiting on {ownerName(status.onOwner, hire)} to finish{' '}

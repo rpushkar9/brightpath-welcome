@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { hrefFor, routeFromHash, type Route } from '../app/route'
+import { currentHrArea, hrefFor, rememberHrArea, routeFromHash, type Route } from '../app/route'
 import { leaderById } from '../domain/people'
 import { DEFAULT_HIRE_ID } from '../domain/seed'
 import { stopTour, useTourOpen } from './tourState'
@@ -124,7 +124,12 @@ const measure = (element: HTMLElement): Box => {
 /** Below the target, then above, then beside it, so the card does not cover what it describes. */
 function cardPosition(box: Box | null): React.CSSProperties {
   const { innerWidth, innerHeight } = window
-  if (innerWidth < 640) return { left: 12, right: 12, bottom: 12 }
+  if (innerWidth < 640) {
+    // The card moves to the top when its target is low, such as the tab bar.
+    return box && box.top > innerHeight / 2
+      ? { left: 12, right: 12, top: 12 }
+      : { left: 12, right: 12, bottom: 12 }
+  }
   const width = CARD_WIDTH
   if (!box) return { left: `calc(50% - ${width / 2}px)`, bottom: 24, width }
 
@@ -147,6 +152,7 @@ function TourPanel() {
   const [index, setIndex] = useState(0)
   const [box, setBox] = useState<Box | null>(null)
   const startHash = useRef(window.location.hash)
+  const startArea = useRef(currentHrArea())
   const nextRef = useRef<HTMLButtonElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const step = steps?.[index]
@@ -207,16 +213,12 @@ function TourPanel() {
 
   const close = () => {
     stopTour()
+    rememberHrArea(startArea.current)
     if (window.location.hash !== startHash.current) window.location.replace(startHash.current || '#/')
     window.setTimeout(() => document.querySelector<HTMLElement>('main')?.focus(), 50)
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      close()
-      return
-    }
     if (event.key !== 'Tab') return
     // Keeps keyboard focus inside the card while the page behind it is blocked.
     const items = cardRef.current?.querySelectorAll<HTMLElement>('button')
@@ -230,6 +232,20 @@ function TourPanel() {
       first?.focus()
     }
   }
+
+  // Escape works wherever focus is, even after clicking the card's text.
+  const closeRef = useRef(close)
+  closeRef.current = close
+  useEffect(() => {
+    const onEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeRef.current()
+      }
+    }
+    window.addEventListener('keydown', onEscape)
+    return () => window.removeEventListener('keydown', onEscape)
+  }, [])
 
   if (!steps || !step) return <div aria-hidden className="fixed inset-0 z-[80]" />
 
@@ -249,6 +265,7 @@ function TourPanel() {
       )}
       <div
         ref={cardRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="tour-title"
