@@ -5,8 +5,8 @@ The timings below are estimates, because nobody has rehearsed this aloud yet. Th
 ## Before you record
 
 1. Record on a weekday. On a weekend, Emily no longer appears on the first day.
-2. Clear the first-visit tours, so they do not pop up on camera. In the browser you will record in, view Emily, Marcus, David, and Sarah once each, and skip the tour. A tour only appears once per person.
-3. Open the **View as** menu and choose **Reset demo data**, so dates and progress are fresh. This does not bring the tours back.
+2. Stop the tours opening by themselves, so they do not pop up on camera. When the tour card appears, clear **Open this tour on every reload**, then click **Skip tour**. This applies to every person in that browser.
+3. Open the **View as** menu and choose **Reset demo data**, so dates and progress are fresh. This does not change the tour setting.
 4. Open two browser windows side by side:
    - Left: `#/me/emily-carter`
    - Right: `#/team/david`

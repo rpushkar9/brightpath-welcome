@@ -21,7 +21,7 @@ npm run dev
 
 Open the URL that Vite prints. It is usually http://localhost:5173.
 
-The prototype has no login. A short tour opens the first time each person is viewed in a browser. To replay it, click **Show me around**. Use the **View as** menu to switch people and to reset the demo data. On a phone, both are in that menu.
+The prototype has no login. Because this is a demo, a tour of each person's view opens after every page load. To stop that, clear the checkbox on the tour card. To replay it, click **Show me around**. Use the **View as** menu to switch people and to reset the demo data. On a phone, both are in that menu.
 
 To see the views update together, open the app in two windows and choose a different person in each.
 
@@ -58,7 +58,8 @@ David wants department-specific requirements. Emily does not want to see 40 task
 **Across the app**
 - Changes persist through a refresh and sync live between tabs.
 - Every screen has its own link, and bad links show a clear message.
-- A short tour for each person, which works by keyboard and on phones. It changes no data.
+- A tour for each person that moves between pages, with 9 to 13 steps. It works by keyboard and on phones, and it changes no data.
+- A sidebar that shows new hires who can help them, and shows leaders their new hires by status.
 - Links to the task being discussed, from nudges, help requests, and reasons for a flag.
 
 ## Where people get stuck
@@ -143,7 +144,7 @@ The full list, with what I would ask Sarah about each, is in [docs/decisions.md]
 
 ```bash
 npm test             # 214 unit tests
-npm run test:e2e     # 169 browser tests, using your installed Chrome
+npm run test:e2e     # 177 browser tests, using your installed Chrome
 npm run build        # type-check and production build
 ```
 

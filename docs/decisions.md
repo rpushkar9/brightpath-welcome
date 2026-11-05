@@ -54,7 +54,9 @@ See section 4 of [plan.md](plan.md).
 | D21 | Glass panels on a softly tinted page, with one dark header | A flat white dashboard | It feels calmer and more considered. Text contrast was checked against the strongest tint |
 | D22 | One-off delays are collapsed in Insights | One ranked list | One person being late is not a pattern, and it buried the real ones |
 | D23 | Activity uses a real log, with no invented history, and a question to HR stays private to HR | Inferring activity from current state | A feed that guesses cannot be trusted. Sensitive questions must not reach a manager |
-| D24 | The first-visit tour has three steps, and a click outside closes it | The earlier six-step tour | A long tour worked against the goal of reducing overwhelm |
+| D24 | The first-visit tour has three steps, and a click outside closes it | The earlier six-step tour | A long tour worked against the goal of reducing overwhelm. D25 replaces the three steps |
+| D25 | The tour opens after every reload, moves between pages, and has 9 to 13 steps. A checkbox stops it opening by itself | Three steps, once per person | This is a demo, and a reviewer should see each role explained without looking for a button. A real product would show a shorter tour on first login only, because a long tour on every load would annoy real new hires |
+| D26 | The sidebar shows "Your people" to new hires and "New hires" to managers and HR | Leaving it empty, or adding decorative charts | Both come from existing data and answer the main question for that role. New hires see who can help. Leaders can reach whoever needs them most from any page |
 | D10 | Radix primitives styled directly | The full shadcn setup | shadcn wraps these same primitives, and we only need a drawer and a menu |
 
 ## Approved decisions

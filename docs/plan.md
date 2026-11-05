@@ -140,9 +140,9 @@ Exactly one status applies, checked in this order:
 
 ### Tour
 
-- Each person's tour opens once, the first time they reach their main screen in this browser. It has at most three steps, and shows only what is on that screen.
-- It waits if someone arrives through a link to a task, and it does not open on a bad link.
-- Skipping counts as seen. **Show me around** replays it. Resetting demo data does not bring it back.
+- Because this is a demo, each person's tour opens by itself after every page load, once per person until the next load. A checkbox on the card turns that off, and **Show me around** always replays it.
+- It starts on the person's main screen and moves between pages. A new hire's tour has 9 steps, a manager's 10, and HR's 13. It leaves out steps that are not on screen, such as a resolved help request.
+- It waits if someone arrives through a link to a task, and it does not open on a bad link. Closing it returns to where the person started. Resetting demo data does not reopen it.
 
 ### Hire status
 
