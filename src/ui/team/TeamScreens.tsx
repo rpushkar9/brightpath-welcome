@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { hrefFor, type Route } from '../../app/route'
 import { formatShort } from '../../domain/dates'
-import { DEPARTMENT_LABEL, firstName, leaderById } from '../../domain/people'
+import { DEPARTMENT_LABEL, firstName, leaderById, SARAH } from '../../domain/people'
 import { buildPlan, hireHealth, progress, stageOf } from '../../domain/plan'
 import {
   blockedBy,
@@ -20,6 +20,7 @@ import {
   type RosterRow,
 } from '../../domain/rules'
 import type { HealthKind, Hire, IsoDate, Leader, Persona, PlanTask } from '../../domain/types'
+import { openRequestsFor, resolveHelp } from '../../domain/help'
 import { store, useStore } from '../../store/store'
 import { PlanPhases } from '../PlanPhases'
 import { BAND_H1, BAND_H1_COMPACT, Shell } from '../Shell'
@@ -109,6 +110,9 @@ export function TeamView({ leader, today }: { leader: Leader; today: IsoDate }) 
   const count = (kind: HealthKind) => rows.filter((row) => row.health.kind === kind).length
   const shown = filter === 'all' ? rows : rows.filter((row) => row.health.kind === filter)
   const isHr = leader.kind === 'hr'
+  const flaggedCount = count('needs-attention') + count('watch')
+  const hasHelp = openRequestsFor(data, leader).length > 0
+  const sideBySide = flaggedCount === 1 && !hasHelp
   const route = (hire: Hire): Route => ({
     screen: 'hire',
     leaderId: leader.id,
@@ -128,7 +132,16 @@ export function TeamView({ leader, today }: { leader: Leader; today: IsoDate }) 
         </>
       }
     >
-      {rows.length > 0 && <NextActions persona={persona} leader={leader} today={today} />}
+      {rows.length > 0 && (
+        // One flagged person sits beside the actions, so neither panel leaves a gap.
+        <div className={sideBySide ? 'grid items-start gap-x-6 lg:grid-cols-2' : ''}>
+          <AttentionSection rows={rows} persona={persona} leader={leader} today={today} />
+          <div className={hasHelp ? 'grid items-start gap-x-6 lg:grid-cols-2' : ''}>
+            <NextActions persona={persona} leader={leader} today={today} narrow={hasHelp || sideBySide} />
+            {hasHelp && <HelpRequests leader={leader} persona={persona} today={today} />}
+          </div>
+        </div>
+      )}
       {rows.length > 0 && (
         <>
           <h2 className="mb-2.5 text-xl font-semibold">{isHr ? 'All new hires' : 'Your new hires'}</h2>
@@ -338,10 +351,12 @@ function NextActions({
   persona,
   leader,
   today,
+  narrow,
 }: {
   persona: Persona
   leader: Leader
   today: IsoDate
+  narrow: boolean
 }) {
   const { data } = useStore()
   const items = leaderActions(persona, data, today)
@@ -354,7 +369,7 @@ function NextActions({
       {items.length === 0 ? (
         <p className="text-[15px] text-muted">Nothing needs you right now.</p>
       ) : leader.kind === 'hr' ? (
-        <div className="grid items-start gap-x-6 gap-y-5 md:grid-cols-2">
+        <div className={`grid items-start gap-x-6 gap-y-5 ${narrow ? '' : 'md:grid-cols-2'}`}>
           <div>
             <h3 className="mb-1.5 font-sans text-sm font-semibold">HR tasks</h3>
             {hr.length > 0 ? (
@@ -375,6 +390,181 @@ function NextActions({
       ) : (
         <ActionList items={items} leader={leader} limit={MANAGER_LIMIT} />
       )}
+    </section>
+  )
+}
+
+function AttentionCard({
+  row,
+  persona,
+  leader,
+  today,
+}: {
+  row: RosterRow
+  persona: Persona
+  leader: Leader
+  today: IsoDate
+}) {
+  const { data } = useStore()
+  const { hire, plan, health } = row
+  const name = firstName(hire.name)
+  const headingId = `attention-${hire.id}`
+  const target = nudgeTarget(persona, hire, data, today)
+  const nudged = hasNudgedToday(data, hire.id, today)
+  const blocks = health.overdue.flatMap((task) => blockedBy(plan, task.template.id))
+  const mine = health.overdue.find((task) => canAct(persona, hire, task.template.owner))
+  const other = health.overdue.find((task) => task.template.owner !== 'employee')
+  const open = (task: PlanTask): Route => ({
+    screen: 'hire',
+    leaderId: leader.id,
+    hireId: hire.id,
+    taskId: task.template.id,
+  })
+  let sentence = ''
+  const ownLate = health.overdue.some((task) => task.template.owner === 'employee')
+  if (!target && !mine && other && !ownLate) {
+    const who = other.template.owner === 'manager' ? ownerName('manager', hire) : firstName(SARAH.name)
+    sentence = `Waiting on ${ownerName(other.template.owner, hire)}. ${who} can clear this.`
+  } else if (!target && !mine && !nudged) {
+    sentence = 'Nothing is late yet. No action needed.'
+  }
+
+  return (
+    <li className="rounded-panel border border-hairline bg-surface p-4 shadow-[0_1px_2px_rgba(18,56,47,0.05)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 id={headingId} className="font-sans text-base font-semibold break-words">
+            {hire.name}
+          </h3>
+          <p className="text-[13px] break-words text-muted">{hire.title}</p>
+        </div>
+        <HealthChip kind={health.kind} />
+      </div>
+      <p className="mt-2 text-[15px]">{healthReason(health, hire)}</p>
+      <BlocksLine hire={hire} blocks={blocks} />
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {target ? (
+          <button
+            type="button"
+            onClick={() => {
+              const result = store.apply((current) => sendNudge(current, persona, hire.id, today))
+              if (result.ok) toast(`Nudge sent to ${name}. It appears in their workspace. No email is sent.`)
+              else toast.error(result.reason)
+            }}
+            className={buttonPrimary}
+          >
+            Nudge {name}
+          </button>
+        ) : mine ? (
+          <a
+            href={hrefFor(open(mine))}
+            onClick={(event) => openTask(event, open(mine))}
+            className={`${buttonPrimary} break-words`}
+          >
+            Open task
+          </a>
+        ) : null}
+        {nudged && !target && <span className="text-[15px] font-medium text-accent-strong">Nudged today</span>}
+        <a
+          href={hrefFor({ screen: 'hire', leaderId: leader.id, hireId: hire.id, taskId: null })}
+          aria-describedby={headingId}
+          className={buttonSecondary}
+        >
+          Open plan
+        </a>
+      </div>
+      {sentence && <p className="mt-2 text-[13px] text-muted">{sentence}</p>}
+    </li>
+  )
+}
+
+function AttentionSection({
+  rows,
+  persona,
+  leader,
+  today,
+}: {
+  rows: RosterRow[]
+  persona: Persona
+  leader: Leader
+  today: IsoDate
+}) {
+  const flagged = rows.filter((row) => row.health.kind === 'needs-attention' || row.health.kind === 'watch')
+  if (flagged.length === 0) return null
+  return (
+    <section className="mb-7">
+      <h2 className="mb-2.5 text-xl font-semibold">Who needs attention</h2>
+      <ul className={`grid gap-3 ${flagged.length === 3 ? 'lg:grid-cols-3' : flagged.length > 1 ? 'md:grid-cols-2' : ''}`}>
+        {flagged.map((row) => (
+          <AttentionCard key={row.hire.id} row={row} persona={persona} leader={leader} today={today} />
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+function HelpRequests({
+  leader,
+  persona,
+  today,
+}: {
+  leader: Leader
+  persona: Persona
+  today: IsoDate
+}) {
+  const { data } = useStore()
+  const requests = openRequestsFor(data, leader)
+  if (requests.length === 0) return null
+  return (
+    <section className="mb-7">
+      <h2 className="mb-2.5 text-xl font-semibold">Help requests</h2>
+      <ul className="divide-y divide-hairline overflow-hidden rounded-panel border border-hairline bg-surface">
+        {requests.map((request) => {
+          const hire = data.hires.find((item) => item.id === request.hireId)
+          if (!hire) return null
+          const task = request.taskId
+            ? buildPlan(hire, data, today).find((item) => item.template.id === request.taskId)
+            : undefined
+          const route: Route = {
+            screen: 'hire',
+            leaderId: leader.id,
+            hireId: hire.id,
+            taskId: task ? task.template.id : null,
+          }
+          return (
+            <li key={request.id} className="px-4 py-3">
+              <p className="font-medium break-words">{hire.name}</p>
+              {task && <p className="text-[13px] break-words text-muted">{task.template.title}</p>}
+              <p className="mt-1 text-[15px] break-words">{request.message}</p>
+              <p className="text-[13px] text-muted">{formatShort(request.on)}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  aria-label={`Mark resolved, request from ${hire.name}`}
+                  onClick={() => {
+                    const result = store.apply((current) => resolveHelp(current, persona, request.id))
+                    if (result.ok) toast('Marked resolved')
+                    else toast.error(result.reason)
+                  }}
+                  className={buttonPrimary}
+                >
+                  Mark resolved
+                </button>
+                {task && (
+                  <a
+                    href={hrefFor(route)}
+                    onClick={(event) => openTask(event, route)}
+                    className={buttonSecondary}
+                  >
+                    Open task
+                  </a>
+                )}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+      <p className="mt-2 text-[13px] text-muted">Requests stay in this app. No email is sent.</p>
     </section>
   )
 }
@@ -449,7 +639,7 @@ function NudgePanel({
             type="button"
             onClick={() => {
               const result = store.apply((current) => sendNudge(current, persona, hire.id, today))
-              if (result.ok) toast(`Nudge sent to ${name}`)
+              if (result.ok) toast(`Nudge sent to ${name}. It appears in their workspace. No email is sent.`)
               else toast.error(result.reason)
             }}
             className={`${buttonPrimary} mt-2`}
