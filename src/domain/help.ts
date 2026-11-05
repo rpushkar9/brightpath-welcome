@@ -129,11 +129,13 @@ function matchTasks(query: string, plan: PlanTask[]): { tasks: PlanTask[]; score
   }))
   const score = Math.max(0, ...scored.map((item) => item.score))
   if (score === 0) return { tasks: [], score: 0 }
-  // On a tie, the person's own tasks come first, because those are what they can act on.
+  // On a tie, open tasks come first, then the person's own, because those are what they can act on.
+  const rank = (task: PlanTask): number =>
+    (task.status.kind === 'completed' ? 2 : 0) + (task.template.owner === 'employee' ? 0 : 1)
   const tasks = scored
     .filter((item) => item.score === score)
     .map((item) => item.task)
-    .sort((a, b) => Number(b.template.owner === 'employee') - Number(a.template.owner === 'employee'))
+    .sort((a, b) => rank(a) - rank(b))
   return { tasks, score }
 }
 

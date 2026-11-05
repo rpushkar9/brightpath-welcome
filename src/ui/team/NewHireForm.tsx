@@ -1,4 +1,3 @@
-import { ArrowLeft } from 'lucide-react'
 import { useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { hrefFor, navigate } from '../../app/route'
@@ -126,15 +125,9 @@ export function NewHireForm({ leader, today }: { leader: Leader; today: IsoDate 
     <Shell
       persona={persona}
       compact
+      back={{ label: 'Back to all new hires', route: teamRoute, current: 'New plan' }}
       band={
         <>
-          <a
-            href={hrefFor(teamRoute)}
-            className="-ml-1 inline-flex min-h-11 items-center gap-1.5 rounded-control px-1 text-sm text-band-soft hover:text-white"
-          >
-            <ArrowLeft size={16} aria-hidden />
-            Back to your team
-          </a>
           <h1 className={BAND_H1_COMPACT}>Start a new plan</h1>
           <p className="mt-1.5 text-sm text-band-soft sm:text-[15px]">
             Enter a few details and the plan is ready to use.

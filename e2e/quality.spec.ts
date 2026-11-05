@@ -83,9 +83,9 @@ test.describe('keyboard', () => {
     await page.keyboard.press('Enter')
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
-    // Focus starts on the scrollable content, so arrow keys can scroll it straight away.
-    await expect(dialog.locator(':focus')).toHaveCount(1)
-    // The scroll area, then the sample document, then the action.
+    // Focus starts on the panel, then moves to the scroll area, the sample document, and the action.
+    await expect(dialog).toBeFocused()
+    await page.keyboard.press('Tab')
     await page.keyboard.press('Tab')
     await page.keyboard.press('Tab')
     await expect(dialog.getByRole('button', { name: 'Mark complete' })).toBeFocused()

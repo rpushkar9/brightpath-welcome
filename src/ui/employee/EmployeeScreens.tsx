@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, CircleCheck, X } from 'lucide-react'
+import { Check, CircleCheck, X } from 'lucide-react'
 import type { Route } from '../../app/route'
 import { hrefFor } from '../../app/route'
 import { businessDaysBetween, formatLong, formatShort } from '../../domain/dates'
@@ -472,15 +472,13 @@ export function EmployeePlan({
     <Shell
       persona={persona}
       compact
+      back={{
+        label: 'Back to my next steps',
+        route: { screen: 'home', hireId: hire.id, taskId: null },
+        current: 'Your full plan',
+      }}
       band={
         <>
-          <a
-            href={hrefFor({ screen: 'home', hireId: hire.id, taskId: null })}
-            className="-ml-1 inline-flex min-h-11 items-center gap-1.5 rounded-control px-1 text-sm text-band-soft hover:text-white"
-          >
-            <ArrowLeft size={16} aria-hidden />
-            Back to my next steps
-          </a>
           <h1 className={BAND_H1_COMPACT}>Your full plan</h1>
           <p className="mt-1.5 text-sm text-band-soft sm:text-[15px]">
             {countsText(plan)} {company} company tasks and {total - company} for your team.

@@ -1,4 +1,3 @@
-import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { hrefFor, type Route } from '../../app/route'
@@ -717,15 +716,13 @@ export function HireDetail({
     <Shell
       persona={persona}
       compact
+      back={{
+        label: leader.kind === 'hr' ? 'Back to all new hires' : 'Back to your team',
+        route: { screen: 'team', leaderId: leader.id },
+        current: hire.name,
+      }}
       band={
         <>
-          <a
-            href={hrefFor({ screen: 'team', leaderId: leader.id })}
-            className="-ml-1 inline-flex min-h-11 items-center gap-1.5 rounded-control px-1 text-sm text-band-soft hover:text-white"
-          >
-            <ArrowLeft size={16} aria-hidden />
-            Back to your team
-          </a>
           <h1 className={BAND_H1_COMPACT}>{hire.name}</h1>
           <p className="mt-1.5 text-sm text-band-soft sm:text-[15px]">
             {hire.title} in {dept}.{manager ? ` Reports to ${manager.name}.` : ''}{' '}

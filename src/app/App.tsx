@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from 'react'
+import { useEffect, useLayoutEffect, useRef, useSyncExternalStore } from 'react'
 import { Toaster, toast } from 'sonner'
 import { parseIsoDate, todayIso } from '../domain/dates'
 import { firstName, leaderById } from '../domain/people'
@@ -12,7 +12,7 @@ import { Tour } from '../ui/Tour'
 import { claimFirstVisit, startTour } from '../ui/tourState'
 import { EmployeeHome, EmployeePlan } from '../ui/employee/EmployeeScreens'
 import { HireDetail, NewHireForm, TeamView } from '../ui/team/TeamScreens'
-import { hrefFor, takeOverlayTrigger, useRoute, type Route } from './route'
+import { hrefFor, pageKeyOf, takeOverlayTrigger, takeReturning, useRoute, type Route } from './route'
 
 const DEFAULT_ROUTE: Route = { screen: 'home', hireId: DEFAULT_HIRE_ID, taskId: null }
 
@@ -42,6 +42,20 @@ function Screen() {
   const { data } = useStore()
   const today = useToday()
   const viewer = viewerOf(route)
+
+  // A new page opens at the top. Going back returns to where you were in the list.
+  const pageKey = pageKeyOf(route)
+  const scrollByPage = useRef(new Map<string, number>())
+  const currentPage = useRef(pageKey)
+  useLayoutEffect(() => {
+    currentPage.current = pageKey
+    window.scrollTo(0, takeReturning() ? (scrollByPage.current.get(pageKey) ?? 0) : 0)
+  }, [pageKey])
+  useEffect(() => {
+    const remember = () => scrollByPage.current.set(currentPage.current, window.scrollY)
+    window.addEventListener('scroll', remember, { passive: true })
+    return () => window.removeEventListener('scroll', remember)
+  }, [])
 
   // Closing a drawer can change screens, so focus returns here rather than in the drawer.
   const hasOverlay = 'taskId' in route && route.taskId !== null

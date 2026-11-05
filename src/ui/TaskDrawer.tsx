@@ -1,6 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { ChevronRight, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { closeOverlay, hrefFor, withTask, type Route } from '../app/route'
 import { formatLong } from '../domain/dates'
 import { RESOURCE_EXCERPTS } from '../domain/resources'
@@ -118,7 +118,7 @@ function DrawerContent({
     <>
       {/* Focusable so keyboard users can scroll long content on small screens. */}
       <div tabIndex={0} className="flex-1 overflow-y-auto px-6 pt-5 pb-6 focus-visible:outline-offset-[-2px]">
-        <div className="pr-10">
+        <div className="pr-24">
           <div className={`flex items-center gap-2 text-sm font-medium ${STATUS_TONE[status.kind]}`}>
             <StatusIcon status={status} size={18} />
             {statusLabel(status, hire)}
@@ -205,6 +205,7 @@ export function TaskDrawer({
   persona: Persona
   parent: Route
 }) {
+  const panelRef = useRef<HTMLDivElement>(null)
   // Keeps the last task on screen while the drawer animates closed.
   const [lastId, setLastId] = useState(taskId)
   useEffect(() => {
@@ -226,6 +227,13 @@ export function TaskDrawer({
         <Dialog.Content
           className={PANEL}
           aria-describedby={undefined}
+          ref={panelRef}
+          tabIndex={-1}
+          // Focus starts on the panel, so no focus ring appears around the content on open.
+          onOpenAutoFocus={(event) => {
+            event.preventDefault()
+            panelRef.current?.focus()
+          }}
           onCloseAutoFocus={(event) => {
             // A finished task can leave the list, so fall back to the content area rather than losing focus.
             const target =
@@ -241,7 +249,7 @@ export function TaskDrawer({
             <DrawerContent task={task} hire={hire} persona={persona} parent={parent} />
           ) : (
             <div className="flex-1 px-6 pt-5">
-              <Dialog.Title className="pr-10 font-display text-2xl font-semibold">
+              <Dialog.Title className="pr-24 font-display text-2xl font-semibold">
                 We can’t find that task
               </Dialog.Title>
               <p className="mt-3 text-[15px] leading-relaxed">
@@ -249,11 +257,9 @@ export function TaskDrawer({
               </p>
             </div>
           )}
-          <Dialog.Close
-            aria-label="Close"
-            className="absolute top-3 right-3 grid size-11 cursor-pointer place-items-center rounded-full text-muted transition-colors duration-100 hover:bg-canvas hover:text-ink"
-          >
-            <X size={20} aria-hidden />
+          <Dialog.Close className="absolute top-3 right-3 inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-control border border-control bg-surface px-3 text-sm font-semibold transition-colors duration-100 hover:bg-canvas">
+            <X size={16} aria-hidden />
+            Close
           </Dialog.Close>
         </Dialog.Content>
       </Dialog.Portal>

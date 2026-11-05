@@ -97,6 +97,27 @@ export function hrefFor(route: Route): string {
   }
 }
 
+/** Identifies a page, ignoring any open task drawer. */
+export const pageKeyOf = (route: Route): string =>
+  hrefFor(
+    route.screen === 'home' || route.screen === 'plan' || route.screen === 'hire'
+      ? { ...route, taskId: null }
+      : route,
+  )
+
+let returning = false
+
+/** Asks the next page to restore its scroll position, because the person is going back. */
+export const markReturning = (): void => {
+  returning = true
+}
+
+export const takeReturning = (): boolean => {
+  const value = returning
+  returning = false
+  return value
+}
+
 /** The same screen, with a task's drawer open. */
 export function withTask(route: Route, taskId: string): Route {
   return route.screen === 'home' || route.screen === 'plan' || route.screen === 'hire'

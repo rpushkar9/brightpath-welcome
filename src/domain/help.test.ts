@@ -137,6 +137,8 @@ describe('answering questions from the plan', () => {
 
   it('says who owns repository access', () => {
     const answer = ask('Who can help me with repository access?')
+    // The open task comes first, because a finished one cannot be what someone needs help with.
+    expect(answer.lines[0]?.taskId).toBe('e-repo-grant')
     const grant = answer.lines.find((line) => line.taskId === 'e-repo-grant')
     expect(grant?.text).toContain('IT owns this')
     expect(grant?.text).toContain('Sarah Mitchell')

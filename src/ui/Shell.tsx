@@ -1,9 +1,9 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import * as Menu from '@radix-ui/react-dropdown-menu'
-import { Check, ChevronDown, Compass, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, Compass, RotateCcw } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
-import { hrefFor, navigate, type Route } from '../app/route'
+import { hrefFor, markReturning, navigate, type Route } from '../app/route'
 import { formatShort } from '../domain/dates'
 import { LEADERS } from '../domain/people'
 import type { Persona } from '../domain/types'
@@ -17,9 +17,17 @@ export const BAND_H1 =
 export const BAND_H1_COMPACT =
   'font-display text-[clamp(1.625rem,1.3rem+1.2vw,2.25rem)] leading-[1.1] font-semibold break-words'
 
-function Logo() {
+/** Your own home screen, so the logo never switches you to someone else. */
+const homeOf = (persona: Persona | null): Route => {
+  if (!persona) return { screen: 'root' }
+  return persona.kind === 'employee'
+    ? { screen: 'home', hireId: persona.hire.id, taskId: null }
+    : { screen: 'team', leaderId: persona.leader.id }
+}
+
+function Logo({ persona }: { persona: Persona | null }) {
   return (
-    <a href={hrefFor({ screen: 'root' })} className="flex shrink-0 items-center gap-2.5 rounded-control whitespace-nowrap">
+    <a href={hrefFor(homeOf(persona))} className="flex shrink-0 items-center gap-2.5 rounded-control whitespace-nowrap">
       <svg viewBox="0 0 32 32" className="size-7" aria-hidden>
         <rect width="32" height="32" rx="8" fill="#f2b544" />
         <path
@@ -202,26 +210,52 @@ function Contours() {
   )
 }
 
+export type BackLink = { label: string; route: Route; current: string }
+
+/** Pinned and on white, so the way back stands out and stays visible while scrolling. */
+function BackBar({ back }: { back: BackLink }) {
+  return (
+    <nav aria-label="Go back" className="sticky top-0 z-30 border-b border-hairline bg-surface">
+      <div className="mx-auto flex max-w-[1120px] items-center gap-3 px-4 py-2 sm:px-8">
+        <a
+          href={hrefFor(back.route)}
+          onClick={markReturning}
+          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control border border-control px-3 text-sm font-semibold text-ink transition-colors duration-100 hover:border-accent hover:bg-accent-tint hover:text-accent-strong"
+        >
+          <ArrowLeft size={18} aria-hidden />
+          {back.label}
+        </a>
+        <span className="min-w-0 truncate text-sm text-muted" aria-current="page">
+          {back.current}
+        </span>
+      </div>
+    </nav>
+  )
+}
+
 /** The dark band opens every screen with the answer to that person's main question. */
 export function Shell({
   persona,
   band,
   compact = false,
+  back,
   children,
 }: {
   persona: Persona | null
   band: ReactNode
   compact?: boolean
+  back?: BackLink
   children: ReactNode
 }) {
   return (
     <div className="min-h-dvh">
       <StoreNotice />
+      {back && <BackBar back={back} />}
       <header className="on-band relative overflow-hidden bg-band text-white">
         <Contours />
         <div className="relative mx-auto max-w-[1120px] px-4 sm:px-8">
           <div className="flex items-center justify-between gap-3 py-3">
-            <Logo />
+            <Logo persona={persona} />
             <div className="flex min-w-0 items-center gap-2">
               <button
                 type="button"
