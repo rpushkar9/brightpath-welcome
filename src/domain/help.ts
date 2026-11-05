@@ -1,6 +1,6 @@
 import { endOfWeek, formatLong } from './dates'
 import { firstName, leaderById, SARAH } from './people'
-import { buildPlan, nextSteps, ownProgress, progress } from './plan'
+import { buildPlan, nextSteps, ownProgress, progress, timeLeft, timeLeftText } from './plan'
 import { ownerName, statusLabel } from './rules'
 import type { AppData, HelpRequest, Hire, IsoDate, Leader, Persona, PlanTask, Result } from './types'
 
@@ -146,7 +146,9 @@ function ownerSentence(task: PlanTask, hire: Hire): string {
 }
 
 const taskLine = (task: PlanTask, hire: Hire): HelpLine => ({
-  text: `“${task.template.title}”: ${statusLabel(task.status, hire)}. ${ownerSentence(task, hire)}`,
+  text: `“${task.template.title}”: ${statusLabel(task.status, hire)}. ${ownerSentence(task, hire)}${
+    task.template.minutes === null ? '' : ` About ${task.template.minutes} minutes.`
+  }`,
   taskId: task.template.id,
 })
 
@@ -257,6 +259,13 @@ export function answerQuestion(question: string, hire: Hire, data: AppData, toda
   if (/\bnext\b|\bfirst\b|focus|start|what (should|do) i/.test(query)) return answerNext(plan, hire)
   if (/\blate\b|overdue|behind|missed/.test(query)) return answerLate(plan, hire)
   if (/week|\bdue\b|deadline/.test(query)) return answerWeek(plan, hire, today)
+  if (/how long|time left|how much time|\bminutes?\b|\bhours?\b/.test(query)) {
+    return {
+      heading: 'How long it should take',
+      lines: [{ text: timeLeftText(timeLeft(plan)) ?? 'None of your tasks are open right now.', taskId: null }],
+      found: true,
+    }
+  }
   if (/progress|how am i|how much|\bleft\b|remaining|\bdone\b|finish/.test(query)) return answerProgress(plan)
   if (asksWho) {
     const manager = leaderById(hire.managerId)

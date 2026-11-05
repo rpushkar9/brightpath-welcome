@@ -209,6 +209,24 @@ test.describe('honest progress and wording', () => {
     await expect(phases.nth(2).locator('svg')).toHaveCount(0) // First week still has open work
   })
 
+  test('shows how long the open tasks should take, and updates', async ({ page }) => {
+    await openApp(page)
+    const section = page.getByRole('heading', { name: 'Your next steps' }).locator('..')
+    await expect(section).toContainText('About 2 hours of your tasks are open now.')
+    await page.getByRole('button', { name: 'Mark complete' }).click()
+    await expect(section).toContainText('About 1 hour 45 minutes of your tasks are open now.')
+  })
+
+  test('does not show a time estimate when nothing is open', async ({ page }) => {
+    await openApp(page)
+    for (const done of [7, 8, 9, 10]) {
+      await page.getByRole('button', { name: 'Mark complete' }).click()
+      await expect(page.locator('header')).toContainText(`Whole plan: ${done} of 18`)
+    }
+    await expect(page.getByText('Nothing needs you today')).toBeVisible()
+    await expect(page.locator('main')).not.toContainText('open now')
+  })
+
   test('does not claim IT is working on something', async ({ page }) => {
     await openApp(page)
     await expect(page.getByText('Waiting for IT to finish “Grant repository access”.')).toBeVisible()

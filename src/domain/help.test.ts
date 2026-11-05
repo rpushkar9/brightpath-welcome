@@ -186,6 +186,18 @@ describe('answering questions from the plan', () => {
     expect(answer.lines[0]?.text).toBe('“Ship your first pull request” opens once you finish “Run the local setup”.')
   })
 
+  it('answers how long things will take from real estimates', () => {
+    const answer = ask('How long will this take?')
+    expect(answer.found).toBe(true)
+    expect(answer.lines[0]?.text).toBe('About 2 hours of your tasks are open now.')
+    expect(ask('How long is left?', 'aisha-rahman').lines[0]?.text).toBe('None of your tasks are open right now.')
+  })
+
+  it('includes the estimate when asked about one task', () => {
+    expect(ask('employee handbook').lines[0]?.text).toContain('About 25 minutes.')
+    expect(ask('Who can help with repository access?').lines.find((line) => line.taskId === 'e-repo-grant')?.text).not.toContain('About')
+  })
+
   it('admits when it cannot answer, rather than guessing', () => {
     const answer = ask('What is the dress code?')
     expect(answer.found).toBe(false)

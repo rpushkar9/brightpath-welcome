@@ -7,6 +7,8 @@ import {
   nextSteps,
   ownProgress,
   progress,
+  timeLeft,
+  timeLeftText,
   stageOf,
   templatesFor,
 } from './plan'
@@ -175,6 +177,46 @@ describe('own progress', () => {
   it('counts only tasks the new hire owns', () => {
     const plan = buildPlan(hire(), data([hire()], ['c-profile', 'c-laptop-prep']), start)
     expect(ownProgress(plan)).toEqual({ done: 1, total: 12, percent: 8 })
+  })
+})
+
+describe('time left', () => {
+  const allDone = (except: string[]) =>
+    templatesFor('engineering')
+      .map((task) => task.id)
+      .filter((id) => !except.includes(id))
+
+  it('adds up only the open tasks the new hire owns', () => {
+    const person = hire()
+    const plan = buildPlan(person, data([person], allDone(['c-handbook', 'c-laptop-setup', 'c-welcome'])), start)
+    // 25 + 20 minutes. The manager's welcome meeting does not count.
+    expect(timeLeft(plan)).toEqual({ minutes: 45, unestimated: 0, tasks: 2 })
+  })
+
+  it('counts tasks with no estimate instead of guessing', () => {
+    const person = hire()
+    const today = addBusinessDays(start, 3)
+    const plan = buildPlan(person, data([person], allDone(['c-handbook', 'e-first-pr'])), today)
+    expect(timeLeft(plan)).toEqual({ minutes: 25, unestimated: 1, tasks: 2 })
+  })
+
+  it('leaves out upcoming and waiting tasks', () => {
+    const person = hire()
+    const plan = buildPlan(person, data([person], allDone(['c-30-day', 'e-repo-grant', 'e-local-setup'])), start)
+    expect(timeLeft(plan)).toEqual({ minutes: 0, unestimated: 0, tasks: 0 })
+  })
+
+  it.each([
+    [{ minutes: 0, unestimated: 0, tasks: 0 }, null],
+    [{ minutes: 45, unestimated: 0, tasks: 2 }, 'About 45 minutes of your tasks are open now.'],
+    [{ minutes: 60, unestimated: 0, tasks: 2 }, 'About 1 hour of your tasks are open now.'],
+    [{ minutes: 120, unestimated: 0, tasks: 4 }, 'About 2 hours of your tasks are open now.'],
+    [{ minutes: 100, unestimated: 0, tasks: 3 }, 'About 1 hour 45 minutes of your tasks are open now.'],
+    [{ minutes: 25, unestimated: 1, tasks: 2 }, 'About 25 minutes of your tasks are open now, plus 1 with no estimate.'],
+    [{ minutes: 0, unestimated: 2, tasks: 2 }, '2 of your tasks are open now, with no time estimate.'],
+    [{ minutes: 0, unestimated: 1, tasks: 1 }, '1 of your tasks is open now, with no time estimate.'],
+  ])('describes %o', (time, expected) => {
+    expect(timeLeftText(time)).toBe(expected)
   })
 })
 

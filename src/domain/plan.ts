@@ -109,6 +109,43 @@ export function progress(plan: PlanTask[]): { done: number; total: number; perce
 export const ownProgress = (plan: PlanTask[]) =>
   progress(plan.filter((task) => task.template.owner === 'employee'))
 
+export type TimeLeft = { minutes: number; unestimated: number; tasks: number }
+
+/** Estimated time for the new hire's open tasks. Tasks with no estimate are counted, not guessed. */
+export function timeLeft(plan: PlanTask[]): TimeLeft {
+  const open = plan.filter(
+    (task) =>
+      task.template.owner === 'employee' &&
+      (task.status.kind === 'overdue' || task.status.kind === 'outstanding'),
+  )
+  return {
+    minutes: open.reduce((sum, task) => sum + (task.template.minutes ?? 0), 0),
+    unestimated: open.filter((task) => task.template.minutes === null).length,
+    tasks: open.length,
+  }
+}
+
+function durationText(minutes: number): string {
+  if (minutes < 60) return `${minutes} minutes`
+  // Rounded to 15 minutes, because these are estimates and should not look precise.
+  const rounded = Math.round(minutes / 15) * 15
+  const hours = Math.floor(rounded / 60)
+  const rest = rounded % 60
+  const hourText = `${hours} ${hours === 1 ? 'hour' : 'hours'}`
+  return rest === 0 ? hourText : `${hourText} ${rest} minutes`
+}
+
+export function timeLeftText({ minutes, unestimated, tasks }: TimeLeft): string | null {
+  if (tasks === 0) return null
+  if (minutes === 0) {
+    return unestimated === 1
+      ? '1 of your tasks is open now, with no time estimate.'
+      : `${unestimated} of your tasks are open now, with no time estimate.`
+  }
+  const extra = unestimated > 0 ? `, plus ${unestimated} with no estimate` : ''
+  return `About ${durationText(minutes)} of your tasks are open now${extra}.`
+}
+
 export function hireHealth(plan: PlanTask[]): HireHealth {
   const overdue = plan.filter((task) => task.status.kind === 'overdue')
   const maxDaysLate = overdue.reduce(

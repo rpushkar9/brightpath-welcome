@@ -3,7 +3,7 @@ import type { Route } from '../../app/route'
 import { hrefFor } from '../../app/route'
 import { businessDaysBetween, formatLong, formatShort } from '../../domain/dates'
 import { DEPARTMENT_LABEL, firstName, leaderById } from '../../domain/people'
-import { buildPlan, nextSteps, ownProgress, progress, stageOf } from '../../domain/plan'
+import { buildPlan, nextSteps, ownProgress, progress, stageOf, timeLeft, timeLeftText } from '../../domain/plan'
 import { dismissNudge, ownerName } from '../../domain/rules'
 import type { Hire, IsoDate, Persona, PlanTask, Stage } from '../../domain/types'
 import { store, useStore } from '../../store/store'
@@ -195,9 +195,15 @@ function NextSteps({ plan, hire, persona }: { plan: PlanTask[]; hire: Hire; pers
     )
   }
 
+  const estimate = timeLeftText(timeLeft(plan))
+
   return (
     <>
-      <ul className="divide-y divide-hairline overflow-hidden rounded-[12px] bg-surface shadow-card ring-1 ring-hairline">
+      {estimate && <p className="-mt-1 mb-2.5 text-sm text-muted">{estimate}</p>}
+      <ul
+        data-tour="start-here"
+        className="divide-y divide-hairline overflow-hidden rounded-[12px] bg-surface shadow-card ring-1 ring-hairline"
+      >
         <FocusStep key={first.template.id} task={first} hire={hire} persona={persona} route={taskRoute(first.template.id)} />
         {rest.map((task) => (
           <TaskRow
@@ -256,6 +262,7 @@ function Waiting({ plan, hire, persona }: { plan: PlanTask[]; hire: Hire; person
   )
   if (waiting.length === 0) return null
   return (
+    <div data-tour="waiting">
     <Section title="Waiting on someone else">
       <SideList
         items={waiting.map((task) => ({
@@ -271,6 +278,7 @@ function Waiting({ plan, hire, persona }: { plan: PlanTask[]; hire: Hire; person
         }))}
       />
     </Section>
+    </div>
   )
 }
 
@@ -370,7 +378,7 @@ export function EmployeeHome({
               </>
             )}
           </p>
-          <div className="mt-3 sm:mt-6">
+          <div data-tour="journey" className="mt-3 sm:mt-6">
             <CompactProgress
               stageLabel={STAGE_LABEL[stage]}
               countLabel="Your tasks"
