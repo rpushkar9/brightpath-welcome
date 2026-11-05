@@ -1,10 +1,12 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { X } from 'lucide-react'
+import { ChevronRight, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { closeOverlay, type Route } from '../app/route'
 import { formatLong } from '../domain/dates'
+import { RESOURCE_EXCERPTS } from '../domain/resources'
 import { canAct, isOwner, ownerName } from '../domain/rules'
 import type { Hire, Persona, PlanTask } from '../domain/types'
+import { NeedHelp } from './NeedHelp'
 import { completeAction, undoAction } from './actions'
 import { CONFIRMATION_NOTE, STATUS_TONE, StatusIcon, scopeLabel, statusLabel } from './status'
 
@@ -43,6 +45,34 @@ function NotAvailableNote({ task, hire, persona }: { task: PlanTask; hire: Hire;
     )
   }
   return null
+}
+
+function Resource({ name }: { name: string }) {
+  const excerpt = RESOURCE_EXCERPTS[name]
+  if (!excerpt) {
+    return (
+      <p className="mt-6 rounded-control bg-canvas px-3 py-2.5 text-sm text-muted">
+        <span className="font-medium text-ink">{name}</span> is sample content. Documents and systems
+        are not connected in this prototype.
+      </p>
+    )
+  }
+  return (
+    <details className="group mt-6 rounded-control bg-canvas text-sm">
+      <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-3 font-medium">
+        <ChevronRight size={16} aria-hidden className="transition-transform duration-200 group-open:rotate-90" />
+        Read {name}
+      </summary>
+      <div className="px-3 pb-3">
+        <ul className="list-disc space-y-1 pl-5 leading-relaxed">
+          {excerpt.map((point) => (
+            <li key={point}>{point}</li>
+          ))}
+        </ul>
+        <p className="mt-2 text-[13px] text-muted">Sample excerpt written for this demo, not a real document.</p>
+      </div>
+    </details>
+  )
 }
 
 function DrawerContent({
@@ -101,12 +131,7 @@ function DrawerContent({
           ))}
         </ol>
 
-        {template.reference && (
-          <p className="mt-6 rounded-control bg-canvas px-3 py-2.5 text-sm text-muted">
-            <span className="font-medium text-ink">{template.reference}</span> is sample content.
-            Documents and systems are not connected in this prototype.
-          </p>
-        )}
+        {template.reference && <Resource name={template.reference} />}
       </div>
 
       <div className="border-t border-hairline px-6 py-4">
@@ -131,6 +156,11 @@ function DrawerContent({
           >
             Undo completion
           </button>
+        )}
+        {persona.kind === 'employee' && status.kind !== 'completed' && (
+          <div className="mt-2 flex justify-center">
+            <NeedHelp hire={hire} persona={persona} task={task} />
+          </div>
         )}
       </div>
     </>

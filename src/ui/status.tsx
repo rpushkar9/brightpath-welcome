@@ -1,8 +1,7 @@
 import { Circle, CircleCheck, CircleDashed, ClockAlert, Hourglass } from 'lucide-react'
-import { formatShort } from '../domain/dates'
 import { DEPARTMENT_LABEL } from '../domain/people'
-import { ownerName } from '../domain/rules'
-import type { HealthKind, Hire, PlanTask, TaskStatus } from '../domain/types'
+import { statusLabel } from '../domain/rules'
+import type { HealthKind, PlanTask, TaskStatus } from '../domain/types'
 
 type StatusKind = TaskStatus['kind']
 
@@ -17,24 +16,7 @@ export const STATUS_TONE: Record<StatusKind, string> = {
   outstanding: 'text-ink',
 }
 
-export function statusLabel(status: TaskStatus, hire: Hire): string {
-  switch (status.kind) {
-    case 'completed':
-      return `Done ${formatShort(status.on)}`
-    case 'upcoming':
-      return `Opens ${formatShort(status.opensOn)}`
-    case 'waiting':
-      return `Waiting on ${ownerName(status.onOwner, hire)}`
-    case 'overdue':
-      return `Was due ${formatShort(status.dueOn)}`
-    case 'outstanding':
-      return status.dueToday ? 'Due today' : `Due ${formatShort(status.dueOn)}`
-    default: {
-      const exhaustive: never = status
-      return exhaustive
-    }
-  }
-}
+export { statusLabel }
 
 export function StatusIcon({ status, size = 20 }: { status: TaskStatus; size?: number }) {
   const props = { size, 'aria-hidden': true, className: `shrink-0 ${STATUS_TONE[status.kind]}` }

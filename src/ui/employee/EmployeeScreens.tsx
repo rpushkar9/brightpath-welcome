@@ -2,17 +2,19 @@ import { ArrowLeft, Check, CircleCheck, X } from 'lucide-react'
 import type { Route } from '../../app/route'
 import { hrefFor } from '../../app/route'
 import { businessDaysBetween, formatLong, formatShort } from '../../domain/dates'
-import { firstName } from '../../domain/people'
+import { DEPARTMENT_LABEL, firstName, leaderById } from '../../domain/people'
 import { buildPlan, nextSteps, ownProgress, progress, stageOf } from '../../domain/plan'
 import { dismissNudge, ownerName } from '../../domain/rules'
 import type { Hire, IsoDate, Persona, PlanTask, Stage } from '../../domain/types'
 import { store, useStore } from '../../store/store'
 import { PlanPhases } from '../PlanPhases'
 import { BAND_H1, BAND_H1_COMPACT, Shell } from '../Shell'
+import { NeedHelp } from '../NeedHelp'
 import { TaskDrawer } from '../TaskDrawer'
 import { TaskRow, openTask } from '../TaskRow'
 import { useFinish } from '../actions'
 import { CONFIRMATION_NOTE, STATUS_TONE, ScopeTag, statusLabel } from '../status'
+import { AskPanel, YourRequests } from './AskPanel'
 import { CompactProgress, PhasePath, STAGE_LABEL } from './PhasePath'
 
 function headline(hire: Hire, stage: Stage, isComplete: boolean, today: IsoDate): string {
@@ -27,6 +29,30 @@ function headline(hire: Hire, stage: Stage, isComplete: boolean, today: IsoDate)
     case 'weeks-2-4':
     case 'past':
       return `Day ${businessDaysBetween(hire.startDate, today) + 1}. Here’s your focus, ${name}.`
+    default: {
+      const exhaustive: never = stage
+      return exhaustive
+    }
+  }
+}
+
+/** A short, human line. It never blames anyone for late work. */
+function encouragement(plan: PlanTask[], stage: Stage, hire: Hire): string {
+  const manager = leaderById(hire.managerId)?.name ?? 'your manager'
+  const own = plan.filter((task) => task.template.owner === 'employee')
+  if (own.some((task) => task.status.kind === 'overdue')) {
+    return 'A few things slipped, which is normal. Start with the first one below.'
+  }
+  switch (stage) {
+    case 'before':
+      return 'A few things to finish now, so your first day is easy.'
+    case 'first-day':
+      return `Take it one step at a time. ${manager} is your manager, and help is one click away.`
+    case 'first-week':
+      return 'You’re settling in. Here’s what matters most right now.'
+    case 'weeks-2-4':
+    case 'past':
+      return 'You’re past the busiest part. Here’s what’s left.'
     default: {
       const exhaustive: never = stage
       return exhaustive
@@ -68,15 +94,18 @@ function FocusStep({
 }) {
   const { finishing, finish } = useFinish(persona, hire.id, task)
   return (
-    <li className="px-4 pt-4 pb-4 sm:px-5 sm:pt-5">
-      <p className="text-sm font-semibold text-accent">Start here</p>
-      <h3 className="mt-1 text-[22px] leading-snug font-semibold break-words">
+    <li className="grid gap-x-6 gap-y-3 p-4 sm:p-5 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <div className="min-w-0">
+      <p className="inline-flex rounded-control bg-soon-tint px-2 py-0.5 text-xs font-semibold text-soon">
+        Start here
+      </p>
+      <h3 className="mt-2 text-2xl leading-tight font-semibold break-words">
         {task.template.title}
       </h3>
-      <p className="mt-1 hidden max-w-[62ch] text-[15px] leading-relaxed text-muted sm:block">
-        {task.template.summary}
+      <p className="mt-1.5 max-w-[60ch] text-[15px] leading-relaxed text-muted">
+        {task.template.why}
       </p>
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
         <span
           className={`${STATUS_TONE[task.status.kind]} ${task.status.kind === 'overdue' ? 'font-medium' : ''}`}
         >
@@ -91,7 +120,7 @@ function FocusStep({
         <button
           type="button"
           onClick={finish}
-          className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control bg-accent px-4 font-semibold text-white transition-colors duration-100 hover:bg-accent-strong"
+          className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control px-4 font-semibold text-white transition-colors duration-100 active:translate-y-px ${finishing ? 'bg-done' : 'bg-accent hover:bg-accent-strong'}`}
         >
           {finishing ? (
             <>
@@ -108,8 +137,26 @@ function FocusStep({
           onClick={(event) => openTask(event, route)}
           className="inline-flex min-h-11 items-center rounded-control border border-control px-4 font-medium transition-colors duration-100 hover:bg-canvas"
         >
-          See what to do
+          Task details
         </a>
+        <NeedHelp hire={hire} persona={persona} task={task} />
+      </div>
+      </div>
+      <div className="hidden rounded-control bg-canvas p-3.5 md:block">
+        <h4 className="font-sans text-[13px] font-semibold text-muted">What to do</h4>
+        <ol className="mt-2 space-y-2 text-sm leading-snug">
+          {task.template.steps.map((step, index) => (
+            <li key={step} className="flex gap-2">
+              <span
+                aria-hidden
+                className="grid size-5 shrink-0 place-items-center rounded-full bg-surface text-xs font-semibold text-accent-strong tabular-nums ring-1 ring-hairline"
+              >
+                {index + 1}
+              </span>
+              <span>{step}</span>
+            </li>
+          ))}
+        </ol>
       </div>
     </li>
   )
@@ -150,7 +197,7 @@ function NextSteps({ plan, hire, persona }: { plan: PlanTask[]; hire: Hire; pers
 
   return (
     <>
-      <ul className="divide-y divide-hairline overflow-hidden rounded-panel border border-hairline bg-surface">
+      <ul className="divide-y divide-hairline overflow-hidden rounded-[12px] bg-surface shadow-card ring-1 ring-hairline">
         <FocusStep key={first.template.id} task={first} hire={hire} persona={persona} route={taskRoute(first.template.id)} />
         {rest.map((task) => (
           <TaskRow
@@ -174,7 +221,14 @@ function NextSteps({ plan, hire, persona }: { plan: PlanTask[]; hire: Hire; pers
 function SideList({
   items,
 }: {
-  items: { key: string; primary: string; secondary: string; route: Route; tone: string }[]
+  items: {
+    key: string
+    primary: string
+    secondary: string
+    route: Route
+    tone: string
+    extra?: React.ReactNode
+  }[]
 }) {
   return (
     <ul className="divide-y divide-hairline rounded-panel border border-hairline bg-surface">
@@ -189,13 +243,14 @@ function SideList({
             {item.primary}
           </a>
           <p className={`mt-0.5 text-[13px] ${item.tone}`}>{item.secondary}</p>
+          {item.extra && <div className="-ml-2 mt-1">{item.extra}</div>}
         </li>
       ))}
     </ul>
   )
 }
 
-function Waiting({ plan, hire }: { plan: PlanTask[]; hire: Hire }) {
+function Waiting({ plan, hire, persona }: { plan: PlanTask[]; hire: Hire; persona: Persona }) {
   const waiting = plan.filter(
     (task) => task.template.owner === 'employee' && task.status.kind === 'waiting',
   )
@@ -212,6 +267,7 @@ function Waiting({ plan, hire }: { plan: PlanTask[]; hire: Hire }) {
               : '',
           route: { screen: 'home', hireId: hire.id, taskId: task.template.id },
           tone: 'text-muted',
+          extra: <NeedHelp hire={hire} persona={persona} task={task} label="Ask for help" />,
         }))}
       />
     </Section>
@@ -299,12 +355,17 @@ export function EmployeeHome({
       band={
         <>
           <h1 className={BAND_H1}>{headline(hire, stage, isComplete, today)}</h1>
+          {!isComplete && (
+            <p className="mt-2.5 hidden max-w-[56ch] text-[17px] leading-snug text-white sm:block">
+              {encouragement(plan, stage, hire)}
+            </p>
+          )}
           <p className="mt-2 text-sm text-band-soft sm:text-[15px]">
             {isComplete ? (
               `All ${total} tasks are done. Your manager can see this too.`
             ) : (
               <>
-                {hire.title}. {startText(hire, today)}.{' '}
+                {hire.title}, {DEPARTMENT_LABEL[hire.department]}. {startText(hire, today)}.{' '}
                 <span className="hidden sm:inline">{countsText(plan)}</span>
               </>
             )}
@@ -337,6 +398,10 @@ export function EmployeeHome({
           >
             See the full plan
           </a>
+          <div className="mt-6 space-y-6">
+            <AskPanel hire={hire} persona={persona} />
+            <YourRequests hire={hire} />
+          </div>
         </div>
       ) : (
         <div className="grid gap-x-8 gap-y-7 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
@@ -344,7 +409,9 @@ export function EmployeeHome({
             <NextSteps plan={plan} hire={hire} persona={persona} />
           </Section>
           <div className="space-y-7">
-            <Waiting plan={plan} hire={hire} />
+            <Waiting plan={plan} hire={hire} persona={persona} />
+            <AskPanel hire={hire} persona={persona} />
+            <YourRequests hire={hire} />
             <ComingUp plan={plan} hire={hire} />
           </div>
         </div>

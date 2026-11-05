@@ -171,6 +171,29 @@ function StoreNotice() {
   )
 }
 
+/** Faint trail-map contour lines, the one decorative element, tied to the path idea. */
+function Contours() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 640 320"
+      preserveAspectRatio="xMaxYMid slice"
+      className="pointer-events-none absolute inset-y-0 right-0 h-full w-[640px] max-w-full"
+    >
+      <g fill="none" stroke="#3a5f55" strokeWidth="1" opacity="0.55">
+        <path d="M640 26C560 12 500 40 452 78s-92 44-142 32-92 8-126 52" />
+        <path d="M640 62c-66-12-122 12-164 46s-84 38-130 28-82 8-112 44" />
+        <path d="M640 98c-56-8-104 12-140 40s-74 32-114 24-72 8-98 38" />
+        <path d="M640 134c-46-6-86 10-116 34s-62 26-96 20-60 6-84 32" />
+        <path d="M640 170c-38-4-70 8-94 28s-50 22-78 16-48 6-68 26" />
+        <path d="M640 206c-30-2-54 6-74 22s-38 18-60 14-36 4-52 20" />
+        <path d="M640 242c-22-2-40 4-54 16s-28 14-44 10-26 4-38 16" />
+        <path d="M640 278c-14 0-26 2-36 10s-18 10-30 8-18 2-26 12" />
+      </g>
+    </svg>
+  )
+}
+
 /** The dark band opens every screen with the answer to that person's main question. */
 export function Shell({
   persona,
@@ -186,8 +209,9 @@ export function Shell({
   return (
     <div className="min-h-dvh">
       <StoreNotice />
-      <header className="on-band bg-band text-white">
-        <div className="mx-auto max-w-[1120px] px-4 sm:px-8">
+      <header className="on-band relative overflow-hidden bg-band text-white">
+        <Contours />
+        <div className="relative mx-auto max-w-[1120px] px-4 sm:px-8">
           <div className="flex items-center justify-between gap-3 py-3">
             <Logo />
             <PersonaMenu persona={persona} />
